@@ -678,7 +678,7 @@ class CheckoutPaymentView(LanguageContextMixin, TemplateView):
                     else "We could not complete the booking. Please check availability and try again."
                 )
             else:
-                send_booking_confirmation(booking, self.language, build_confirmation_url(request, booking))
+                send_booking_confirmation(booking, self.language, build_confirmation_url(request, booking), request=request)
                 request.session.pop("pending_booking", None)
                 request.session.pop("checkout_details", None)
                 return redirect("booking-confirmation", pk=booking.pk)

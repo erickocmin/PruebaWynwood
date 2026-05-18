@@ -1,13 +1,21 @@
 {% if language == "es" %}Reserva confirmada{% else %}Booking confirmed{% endif %}
 
+{% if language == "es" %}Hola{% else %}Hello{% endif %} {{ guest_first_name }},
+
 {% if language == "es" %}
-Tu reserva para {{ booking.property.title_es }} fue confirmada.
+Tu reserva ha sido confirmada.
 {% else %}
-Your reservation for {{ booking.property.title_en }} has been confirmed.
+Your booking has been confirmed.
 {% endif %}
 
-Check-in: {{ booking.check_in }}
-Check-out: {{ booking.check_out }}
-Total: €{{ booking.total_amount }}
+{{ property_title }}
+{{ property_address }}
+{{ formatted_check_in }} - {{ formatted_check_out }}
+
+{{ nights }} {% if language == "es" %}noches{% else %}nights{% endif %}: {{ formatted_nightly_subtotal }}
+{% if language == "es" %}Tarifa de limpieza{% else %}Cleaning fee{% endif %}: {{ formatted_cleaning_fee }}
+{% if language == "es" %}Total{% else %}Total{% endif %}: {{ formatted_total_amount }}
+
+Wynwood Points: {{ points_total }}
 
 {{ absolute_url }}

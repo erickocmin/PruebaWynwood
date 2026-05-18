@@ -4,7 +4,6 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.urls import reverse
-
 from .models import Country, FooterSection, NavigationItem, SiteConfiguration
 
 
@@ -314,16 +313,86 @@ def calculate_booking_total(property_obj, check_in, check_out):
     return subtotal + property_obj.cleaning_fee + property_obj.service_fee
 
 
-def send_booking_confirmation(booking, language, absolute_url):
+def build_absolute_media_url(request, file_field):
+    if not request or not file_field:
+        return ""
+    try:
+        return request.build_absolute_uri(file_field.url)
+    except ValueError:
+        return ""
+
+
+def format_currency(value):
+    return f"US$ {Decimal(value).quantize(Decimal('0.01'))}"
+
+
+def format_localized_date(value, language):
+    months = {
+        "es": [
+            "enero", "febrero", "marzo", "abril", "mayo", "junio",
+            "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+        ],
+        "en": [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December",
+        ],
+    }
+    month_name = months[language][value.month - 1]
+    if language == "es":
+        return f"{value.day} de {month_name} de {value.year}"
+    return f"{month_name} {value.day}, {value.year}"
+
+
+def build_booking_email_context(booking, language, absolute_url, request=None):
+    site_settings = get_site_configuration()
+    nights = max(1, (booking.check_out - booking.check_in).days)
+    nightly_subtotal = booking.property.nightly_price * nights
+    property_obj = localize_property(booking.property, language)
+    hero_image_url = build_absolute_media_url(request, property_obj.primary_image.image) if property_obj.primary_image else ""
+    destinations = []
+    for country in Country.objects.filter(is_active=True).order_by("sort_order", "name_en")[:4]:
+        localize_country(country, language)
+        destinations.append({"label": country.display_name})
+    if not destinations:
+        fallback_labels = ["Mexico", "Peru", "Panama", "Spain"] if language == "en" else ["Mexico", "Peru", "Panama", "Espana"]
+        destinations = [{"label": label} for label in fallback_labels]
+    points_divisor = site_settings.default_points_divisor if site_settings and site_settings.default_points_divisor else 2
+    support_url = f"mailto:{site_settings.contact_cta_email}" if site_settings and site_settings.contact_cta_email else absolute_url
+    return {
+        "booking": booking,
+        "language": language,
+        "absolute_url": absolute_url,
+        "guest_first_name": booking.guest.first_name.strip() or booking.guest.email.split("@")[0],
+        "hero_image_url": hero_image_url,
+        "nights": nights,
+        "nightly_subtotal": nightly_subtotal,
+        "cleaning_fee": booking.property.cleaning_fee,
+        "total_amount": booking.total_amount,
+        "points_total": int((booking.total_amount or 0) // points_divisor),
+        "property_title": property_obj.display_title,
+        "property_address": f"{booking.property.address}. {booking.property.city.display_name}, {booking.property.city.display_country}",
+        "formatted_check_in": format_localized_date(booking.check_in, language),
+        "formatted_check_out": format_localized_date(booking.check_out, language),
+        "formatted_nightly_subtotal": format_currency(nightly_subtotal),
+        "formatted_cleaning_fee": format_currency(booking.property.cleaning_fee),
+        "formatted_total_amount": format_currency(booking.total_amount),
+        "support_url": support_url,
+        "confirmation_policy_url": site_settings.confirmation_policy_url if site_settings and site_settings.confirmation_policy_url else absolute_url,
+        "confirmation_tagline": site_settings.confirmation_tagline if site_settings else "Home Experience, Hotel Quality",
+        "instagram_url": site_settings.instagram_url if site_settings else "",
+        "facebook_url": site_settings.facebook_url if site_settings else "",
+        "linkedin_url": site_settings.linkedin_url if site_settings else "",
+        "app_store_url": site_settings.app_store_url if site_settings and site_settings.app_store_url else "#",
+        "google_play_url": site_settings.google_play_url if site_settings and site_settings.google_play_url else "#",
+        "destinations": destinations,
+    }
+
+
+def send_booking_confirmation(booking, language, absolute_url, request=None):
     subject = "Reserva confirmada" if language == "es" else "Booking confirmed"
-    html_message = render_to_string(
-        "bookings/emails/booking_confirmation.html",
-        {"booking": booking, "language": language, "absolute_url": absolute_url},
-    )
-    plain_message = render_to_string(
-        "bookings/emails/booking_confirmation.txt",
-        {"booking": booking, "language": language, "absolute_url": absolute_url},
-    )
+    context = build_booking_email_context(booking, language, absolute_url, request=request)
+    html_message = render_to_string("bookings/emails/booking_confirmation.html", context)
+    plain_message = render_to_string("bookings/emails/booking_confirmation.txt", context)
     send_mail(
         subject=subject,
         message=plain_message,

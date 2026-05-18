@@ -79,23 +79,40 @@ opción por defecto, asi que no toco nada extra para correrlo localmente.
 
 ## Correo de confirmación
 
-Por defecto el proyecto usa backend de consola, o sea que cuando se completa una reserva el correo se imprime en terminal. Eso lo dejé asi para que sea facil de probar rapido.
+El correo se dispara automaticamente despues de completar el pago y confirmar la reserva.
 
-Configuración por defecto:
+Si no configuras credenciales SMTP, el proyecto usa consola y el correo se imprime en terminal.
 
-```bash
-EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+### Usar Gmail con contraseña de aplicación
+
+En Windows PowerShell:
+
+```powershell
+$env:EMAIL_HOST_USER="tu_correo@gmail.com"
+$env:EMAIL_HOST_PASSWORD="tu_password_de_aplicacion"
+$env:EMAIL_HOST="smtp.gmail.com"
+$env:EMAIL_PORT="587"
+$env:EMAIL_USE_TLS="True"
+$env:DEFAULT_FROM_EMAIL="tu_correo@gmail.com"
 ```
 
-Si se quiere probar SMTP local, se puede usar algo asi:
+Con solo `EMAIL_HOST_USER` y `EMAIL_HOST_PASSWORD`, el proyecto cambia automaticamente de backend de consola a SMTP.
 
-```bash
-set EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-set EMAIL_HOST=localhost
-set EMAIL_PORT=1025
+Luego ejecuta:
+
+```powershell
+python manage.py runserver
 ```
 
-Con eso ya puedes levantar algun servidor SMTP de pruebas, por ejemplo MailHog, smtp4dev o algo parecido.
+Si prefieres un SMTP local para pruebas:
+
+```powershell
+$env:EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend"
+$env:EMAIL_HOST="localhost"
+$env:EMAIL_PORT="1025"
+```
+
+Con eso puedes usar MailHog, smtp4dev o cualquier servidor SMTP local.
 
 ## Datos iniciales
 

@@ -1,18 +1,185 @@
-<html>
+<!DOCTYPE html>
+<html lang="{% if language == 'es' %}es{% else %}en{% endif %}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% if language == "es" %}Wynwood House - Confirmacion de reserva{% else %}Wynwood House - Booking confirmation{% endif %}</title>
+  <style>
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; display: block; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #f2f2f2;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #1a1a1a;
+    }
+    .email-wrapper { background-color: #f2f2f2; padding: 32px 16px; }
+    .email-container { background-color: #ffffff; max-width: 460px; margin: 0 auto; border-radius: 2px; overflow: hidden; }
+    .header { text-align: center; padding: 28px 32px 0; }
+    .logo { font-family: 'Georgia', 'Times New Roman', serif; font-size: 22px; font-weight: 700; letter-spacing: 0.05em; color: #1a1a1a; text-decoration: none; display: inline-block; }
+    .logo-house { display: block; font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; font-weight: 400; color: #888; margin-top: 2px; text-align: center; }
+    .greeting-section { text-align: center; padding: 24px 32px 0; }
+    .greeting-title { font-family: 'Georgia', 'Times New Roman', serif; font-size: 32px; font-weight: 400; color: #1a1a1a; margin-bottom: 10px; }
+    .greeting-subtitle { font-size: 10px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #1a1a1a; line-height: 1.6; }
+    .hero-image { margin: 22px 0 0; width: 100%; }
+    .hero-image img { width: 100%; height: 220px; object-fit: cover; display: block; }
+    .hero-placeholder { width: 100%; height: 220px; background: linear-gradient(135deg, #c8b89a 0%, #b8a88a 30%, #d4c4a8 60%, #c0b09a 100%); }
+    .confirm-section { padding: 28px 40px 0; text-align: center; }
+    .confirm-section p { font-size: 13px; color: #1a1a1a; line-height: 1.75; margin-bottom: 6px; }
+    .cta-wrap { text-align: center; padding: 22px 40px 0; }
+    .btn-cta { display: inline-block; background: #1a1a1a; color: #ffffff; font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; text-decoration: none; padding: 14px 32px; border-radius: 2px; }
+    .divider { border: none; border-top: 1px solid #e8e8e8; margin: 28px 40px 0; }
+    .points-section { text-align: center; padding: 24px 40px 0; }
+    .points-label { font-size: 9px; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; color: #1a1a1a; margin-bottom: 8px; }
+    .points-value { font-family: 'Georgia', 'Times New Roman', serif; font-size: 26px; font-weight: 400; color: #1a1a1a; margin-bottom: 10px; }
+    .points-link { font-size: 12px; color: #1a1a1a; text-decoration: underline; text-underline-offset: 3px; }
+    .summary-section { padding: 28px 32px 0; }
+    .summary-title { font-size: 14px; font-weight: 500; color: #1a1a1a; margin-bottom: 16px; }
+    .divider-full { border: none; border-top: 1px solid #e8e8e8; margin: 0 0 16px; }
+    .property-name { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+    .property-address { font-size: 12px; color: #888; margin-bottom: 2px; }
+    .property-dates { font-size: 12px; color: #888; margin-bottom: 18px; }
+    .price-line { font-size: 13px; color: #1a1a1a; margin-bottom: 4px; }
+    .total-line { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 0 0; margin-top: 8px; border-top: 1px solid #e8e8e8; }
+    .total-label { font-size: 15px; font-weight: 700; }
+    .total-amount { font-size: 18px; font-weight: 700; }
+    .destinations-section { padding: 28px 32px 0; }
+    .destinations-title { font-size: 14px; font-weight: 500; color: #1a1a1a; margin-bottom: 14px; }
+    .destinations-grid { width: 100%; }
+    .dest-item { width: 25%; display: inline-block; vertical-align: top; padding-right: 8px; }
+    .dest-ph { width: 100%; height: 82px; border-radius: 2px; margin-bottom: 5px; }
+    .dest-ph-1 { background: linear-gradient(160deg, #4a7a9b 0%, #2c5f7a 100%); }
+    .dest-ph-2 { background: linear-gradient(160deg, #e8a44a 0%, #c47820 100%); }
+    .dest-ph-3 { background: linear-gradient(160deg, #3a5a7a 0%, #1a3a5a 100%); }
+    .dest-ph-4 { background: linear-gradient(160deg, #8a7a6a 0%, #6a5a4a 100%); }
+    .dest-label { font-size: 11px; color: #1a1a1a; }
+    .yellow-footer { background-color: #f5b800; margin-top: 28px; padding: 32px 32px 28px; }
+    .yf-asterisk { font-size: 24px; font-weight: 300; color: #1a1a1a; margin-bottom: 20px; display: block; }
+    .yf-headline { font-size: 15px; font-weight: 700; color: #1a1a1a; line-height: 1.4; margin-bottom: 14px; }
+    .yf-body { font-size: 12px; color: #1a1a1a; line-height: 1.6; }
+    .yf-badges { margin-top: 18px; }
+    .store-badge { display: inline-block; background: #1a1a1a; color: #ffffff; border-radius: 6px; padding: 10px 14px; text-decoration: none; min-width: 140px; margin-right: 8px; margin-top: 8px; }
+    .store-badge-small { display: block; font-size: 8px; font-weight: 300; letter-spacing: 0.04em; }
+    .store-badge-big { display: block; font-size: 13px; font-weight: 600; }
+    .social-row { text-align: center; margin: 18px 0; }
+    .social-row a { color: #1a1a1a; text-decoration: none; margin: 0 8px; font-size: 12px; font-weight: 600; }
+    .footer-bottom { text-align: center; padding-bottom: 4px; }
+    .footer-tagline { font-size: 9px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #1a1a1a; margin-bottom: 10px; }
+    .footer-links { margin-bottom: 20px; }
+    .footer-links a { font-size: 11px; color: #1a1a1a; text-decoration: underline; text-underline-offset: 3px; display: block; margin-bottom: 5px; }
+    .footer-logo-bottom { font-family: 'Georgia', 'Times New Roman', serif; font-size: 20px; font-weight: 700; color: #1a1a1a; letter-spacing: 0.05em; }
+  </style>
+</head>
 <body>
-    <h1>{% if language == "es" %}Reserva confirmada{% else %}Booking confirmed{% endif %}</h1>
-    <p>
-        {% if language == "es" %}
-            Tu reserva para {{ booking.property.title_es }} fue confirmada.
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="header">
+        <a class="logo" href="{{ absolute_url }}">wynwood<sup style="font-size:18px; font-weight:300;">*</sup></a>
+        <span class="logo-house">house</span>
+      </div>
+
+      <div class="greeting-section">
+        <h1 class="greeting-title">{% if language == "es" %}!Hola {{ guest_first_name|default:"Huesped" }}!{% else %}Hello {{ guest_first_name|default:"Guest" }}!{% endif %}</h1>
+        <p class="greeting-subtitle">{% if language == "es" %}Gracias por elegir Wynwood House{% else %}Thank you for choosing Wynwood House{% endif %}</p>
+      </div>
+
+      <div class="hero-image">
+        {% if hero_image_url %}
+          <img src="{{ hero_image_url }}" alt="{{ property_title }}" />
         {% else %}
-            Your reservation for {{ booking.property.title_en }} has been confirmed.
+          <div class="hero-placeholder"></div>
         {% endif %}
-    </p>
-    <p>
-        Check-in: {{ booking.check_in }}<br>
-        Check-out: {{ booking.check_out }}<br>
-        Total: €{{ booking.total_amount }}
-    </p>
-    <p><a href="{{ absolute_url }}">{{ absolute_url }}</a></p>
+      </div>
+
+      <div class="confirm-section">
+        {% if language == "es" %}
+          <p>!Ya estas listo para comenzar tu Wynwood Experience!</p>
+          <p>Tu reserva ha sido confirmada y esperamos recibirte muy pronto.<br />Previo a tu llegada recibiras en tu correo toda la informacion para el ingreso.</p>
+          <p>Si tienes alguna inquietud no dudes en comunicarte con nosotros.</p>
+        {% else %}
+          <p>You are ready to start your Wynwood Experience.</p>
+          <p>Your booking has been confirmed and we look forward to welcoming you soon.<br />Before your arrival you will receive all check-in details by email.</p>
+          <p>If you have any questions, please feel free to contact us.</p>
+        {% endif %}
+      </div>
+
+      <div class="cta-wrap">
+        <a href="{{ support_url }}" class="btn-cta">{% if language == "es" %}Conversa con nosotros 24/7{% else %}Chat with us 24/7{% endif %}</a>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="points-section">
+        <p class="points-label">{% if language == "es" %}Con esta reserva estas acumulando{% else %}With this booking you are earning{% endif %}</p>
+        <p class="points-value">{{ points_total }} Wynwood Points</p>
+        <a href="{{ absolute_url }}" class="points-link">{% if language == "es" %}Descubre tus beneficios{% else %}Discover your benefits{% endif %}</a>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="summary-section">
+        <p class="summary-title">{% if language == "es" %}Resumen de tu reserva{% else %}Booking summary{% endif %}</p>
+        <hr class="divider-full" />
+        <p class="property-name">{{ property_title }}</p>
+        <p class="property-address">{{ property_address }}</p>
+        <p class="property-dates">{{ formatted_check_in }} - {{ formatted_check_out }}</p>
+        <p class="price-line">{{ nights }} {% if language == "es" %}Noches{% else %}Nights{% endif %} {{ formatted_nightly_subtotal }}</p>
+        <p class="price-line">{% if language == "es" %}Tarifa de limpieza{% else %}Cleaning fee{% endif %} {{ formatted_cleaning_fee }}</p>
+        <p class="price-line">{% if language == "es" %}Monto facturado{% else %}Billed amount{% endif %} {{ formatted_total_amount }}</p>
+        <div class="total-line">
+          <span class="total-label">{% if language == "es" %}Total{% else %}Total{% endif %}</span>
+          <span class="total-amount">{{ formatted_total_amount }}</span>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="destinations-section">
+        <p class="destinations-title">{% if language == "es" %}Otros destinos{% else %}Other destinations{% endif %}</p>
+        <div class="destinations-grid">
+          {% for destination in destinations %}
+            <div class="dest-item">
+              <div class="dest-ph dest-ph-{% cycle '1' '2' '3' '4' %}"></div>
+              <span class="dest-label">{{ destination.label }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="yellow-footer">
+        <span class="yf-asterisk">*</span>
+        <p class="yf-headline">{% if language == "es" %}Explora tu destino con confianza con nuestras guias de ciudades.{% else %}Explore your destination with confidence through our city guides.{% endif %}</p>
+        <p class="yf-body">{% if language == "es" %}No te conformes con lo basico. Descarga nuestra app, personaliza tu estancia con servicios adicionales y disfruta de una nueva forma de viajar.{% else %}Go beyond the basics. Download our app, personalize your stay with add-on services, and enjoy a new way to travel.{% endif %}</p>
+        <div class="yf-badges">
+          <a href="{{ app_store_url }}" class="store-badge">
+            <span class="store-badge-small">Download on the</span>
+            <span class="store-badge-big">App Store</span>
+          </a>
+          <a href="{{ google_play_url }}" class="store-badge">
+            <span class="store-badge-small">GET IT ON</span>
+            <span class="store-badge-big">Google Play</span>
+          </a>
+        </div>
+
+        <div class="social-row">
+          {% if facebook_url %}<a href="{{ facebook_url }}">Facebook</a>{% endif %}
+          {% if instagram_url %}<a href="{{ instagram_url }}">Instagram</a>{% endif %}
+          {% if linkedin_url %}<a href="{{ linkedin_url }}">LinkedIn</a>{% endif %}
+        </div>
+
+        <div class="footer-bottom">
+          <p class="footer-tagline">{{ confirmation_tagline }}</p>
+          <div class="footer-links">
+            <a href="{{ support_url }}">{% if language == "es" %}Soporte 24/7{% else %}24/7 support{% endif %}</a>
+            <a href="{{ confirmation_policy_url }}">{% if language == "es" %}Politicas de cancelacion{% else %}Cancellation policy{% endif %}</a>
+          </div>
+          <div class="footer-logo-bottom">wynwood<sup>*</sup></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
