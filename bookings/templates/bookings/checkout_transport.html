@@ -1,0 +1,141 @@
+{% extends "bookings/base.html" %}
+{% load static %}
+
+{% block title %}{% if current_language == 'es' %}Servicio de Transporte{% else %}Transport Service{% endif %} | Wynwood House{% endblock %}
+
+{% block body_class %}checkout-transport-body{% endblock %}
+{% block main_class %}checkout-transport-main{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'bookings/css/checkout-transport.css' %}" />
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'bookings/js/checkout-transport.js' %}"></script>
+{% endblock %}
+
+{% block site_footer %}
+  {% include "bookings/partials/checkout_footer.html" %}
+{% endblock %}
+
+{% block content %}
+  <section class="checkout-transport-shell">
+    <div class="checkout-transport-breadcrumb">
+      <span>*</span>
+      <a href="{% url 'home' %}">{{ property.city.display_country }}</a>
+      <i>|</i>
+      <a href="{% url 'search-results' %}?city={{ property.city_id }}">{{ property.city.display_name }}</a>
+      <i>|</i>
+      <a href="{{ property.get_absolute_url }}">{{ property.display_title }}</a>
+      <i>|</i>
+      <strong>{% if current_language == 'es' %}Servicio de transporte{% else %}Transport service{% endif %}</strong>
+    </div>
+
+    <div class="checkout-transport-layout">
+      <div class="checkout-transport-left">
+        <h1>{% if current_language == 'es' %}Servicio de Transporte{% else %}Transport Service{% endif %}</h1>
+        <p>Organiza tu transporte con Wynwood House y disfruta de un viaje seguro y comodo desde el momento en que llegas hasta que te despides de tu destino.</p>
+        <p>Reserva tu transporte desde y hacia el aeropuerto segun tus preferencias:</p>
+
+        <div class="checkout-transport-body-grid">
+          <form method="post" class="checkout-transport-form">
+            {% csrf_token %}
+
+            <div class="checkout-transport-radio-group">
+              <span>Tipo de viaje</span>
+              <label>
+                <input type="radio" name="trip_type" value="ida" {% if transport_details.trip_type == 'ida' %}checked{% endif %} />
+                <i></i>
+                Ida
+              </label>
+              <label>
+                <input type="radio" name="trip_type" value="idavuelta" {% if transport_details.trip_type == 'idavuelta' %}checked{% endif %} />
+                <i></i>
+                Ida y vuelta
+              </label>
+            </div>
+
+            <div class="checkout-transport-dates">
+              <div class="checkout-transport-date-row">
+                <span>Ida</span>
+                <strong>{{ booking_summary.check_in|date:"d/m/y" }}</strong>
+                <em>-</em>
+                <strong>1:00PM - 2:00PM</strong>
+              </div>
+              <div class="checkout-transport-date-row">
+                <span>Vuelta</span>
+                <strong>{{ booking_summary.check_out|date:"d/m/y" }}</strong>
+                <em>-</em>
+                <strong>1:00PM - 2:00PM</strong>
+              </div>
+            </div>
+
+            <div class="checkout-transport-vehicle">
+              <span>Tipo de vehiculo</span>
+              <div>
+                <label>
+                  <input type="radio" name="vehicle_type" value="suv" {% if transport_details.vehicle_type == 'suv' %}checked{% endif %} />
+                  <i></i>
+                  Suv
+                </label>
+                <label>
+                  <input type="radio" name="vehicle_type" value="van" {% if transport_details.vehicle_type == 'van' %}checked{% endif %} />
+                  <i></i>
+                  Van
+                </label>
+              </div>
+            </div>
+
+            <div class="checkout-transport-quantity">
+              <span>Vehiculos</span>
+              <div>
+                <button type="button" data-qty-change="-1">−</button>
+                <strong id="transportQtyDisplay">{{ transport_details.quantity }}</strong>
+                <button type="button" data-qty-change="1">+</button>
+              </div>
+              <input type="hidden" name="quantity" id="transportQtyInput" value="{{ transport_details.quantity }}" />
+            </div>
+
+            <div class="checkout-transport-actions">
+              <button type="submit" name="action" value="back" class="checkout-transport-back">Volver</button>
+              <button type="submit" name="action" value="add" class="checkout-transport-add">Agregar</button>
+            </div>
+          </form>
+
+          <aside class="checkout-transport-service-summary">
+            <p>Resumen del servicio</p>
+            <div class="checkout-transport-service-summary__row"><span>Suv</span><strong>{{ transport_details.quantity }}</strong></div>
+            <div class="checkout-transport-service-summary__row"><span>Pasajeros</span><strong>{{ booking_summary.guests|add:2 }}</strong></div>
+            <div class="checkout-transport-service-summary__row"><span>Maletas</span><strong>{{ booking_summary.guests|add:1 }}</strong></div>
+            <div class="checkout-transport-service-summary__total"><span>Total:</span><strong>USD ${{ transport_total|floatformat:0 }}</strong></div>
+          </aside>
+        </div>
+      </div>
+
+      <aside class="checkout-transport-right">
+        <a href="#" class="checkout-transport-help">Necesitas ayuda para completar tu reserva?</a>
+        <div class="checkout-transport-summary">
+          <div class="checkout-transport-summary__property">
+            <div class="checkout-transport-summary__image">{% if checkout_image %}<img src="{{ checkout_image }}" alt="{{ property.display_title }}" />{% endif %}</div>
+            <div>
+              <p>{{ property.display_title }}</p>
+              <span>{{ property.display_neighborhood }}, {{ property.city.display_name }}, {{ property.city.display_country }}</span>
+            </div>
+          </div>
+
+          <div class="checkout-transport-summary__divider"></div>
+          <div class="checkout-transport-summary__row"><span>Fechas</span><strong>{{ booking_summary.check_in|date:"d M" }} - {{ booking_summary.check_out|date:"d M" }}</strong></div>
+          <div class="checkout-transport-summary__row"><span>{{ ui.property_guests }}</span><strong>{{ booking_summary.guests }} {% if current_language == 'es' %}personas{% else %}guests{% endif %}</strong></div>
+          <div class="checkout-transport-summary__divider"></div>
+          <div class="checkout-transport-price-row"><span>US$ {{ property.nightly_price|floatformat:2 }} x {{ booking_summary.nights }}</span><strong>US$ {{ booking_summary.nightly_subtotal|floatformat:2 }}</strong></div>
+          <div class="checkout-transport-price-row"><span>{{ ui.checkout_cleaning_fee }}</span><strong>US$ {{ property.cleaning_fee|floatformat:2 }}</strong></div>
+          <div class="checkout-transport-summary__divider"></div>
+          <div class="checkout-transport-price-row checkout-transport-price-row--discount"><span>{{ ui.checkout_discount }}</span><strong>US$ -{{ booking_summary.discount|floatformat:0 }}</strong></div>
+          <div class="checkout-transport-summary__divider"></div>
+          <div class="checkout-transport-price-row checkout-transport-price-row--total"><span>{{ ui.checkout_total }}</span><strong>US$ {{ booking_summary.total|floatformat:2 }}</strong></div>
+          <div class="checkout-transport-points"><p>{{ ui.checkout_points_copy }}</p><span>{{ checkout_points }} Wynwood Points</span><a href="#">{{ ui.checkout_points_link }}</a></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+{% endblock %}

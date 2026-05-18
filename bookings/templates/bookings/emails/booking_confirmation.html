@@ -1,0 +1,18 @@
+<html>
+<body>
+    <h1>{% if language == "es" %}Reserva confirmada{% else %}Booking confirmed{% endif %}</h1>
+    <p>
+        {% if language == "es" %}
+            Tu reserva para {{ booking.property.title_es }} fue confirmada.
+        {% else %}
+            Your reservation for {{ booking.property.title_en }} has been confirmed.
+        {% endif %}
+    </p>
+    <p>
+        Check-in: {{ booking.check_in }}<br>
+        Check-out: {{ booking.check_out }}<br>
+        Total: €{{ booking.total_amount }}
+    </p>
+    <p><a href="{{ absolute_url }}">{{ absolute_url }}</a></p>
+</body>
+</html>

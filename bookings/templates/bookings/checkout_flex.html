@@ -1,0 +1,129 @@
+{% extends "bookings/base.html" %}
+{% load static %}
+
+{% block title %}{% if current_language == 'es' %}Check-in y Check-out Flexible{% else %}Flexible Check-in and Check-out{% endif %} | Wynwood House{% endblock %}
+
+{% block body_class %}checkout-transport-body{% endblock %}
+{% block main_class %}checkout-transport-main{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'bookings/css/checkout-transport.css' %}" />
+{% endblock %}
+
+{% block site_footer %}
+  {% include "bookings/partials/checkout_footer.html" %}
+{% endblock %}
+
+{% block content %}
+  <section class="checkout-transport-shell">
+    <div class="checkout-transport-breadcrumb">
+      <span>*</span>
+      <a href="{% url 'home' %}">{{ property.city.display_country }}</a>
+      <i>|</i>
+      <a href="{% url 'search-results' %}?city={{ property.city_id }}">{{ property.city.display_name }}</a>
+      <i>|</i>
+      <a href="{{ property.get_absolute_url }}">{{ property.display_title }}</a>
+      <i>|</i>
+      <strong>{% if current_language == 'es' %}Check-in y Check-out flexible{% else %}Flexible check-in and check-out{% endif %}</strong>
+    </div>
+
+    <div class="checkout-transport-layout">
+      <div class="checkout-transport-left">
+        <h1>{% if current_language == 'es' %}Check-in y Check-out flexible{% else %}Flexible check-in and check-out{% endif %}</h1>
+        <p>Configura una llegada mas temprana o una salida mas tarde segun tu itinerario. Nos adaptamos a tu viaje para que entres y salgas con mayor tranquilidad.</p>
+        <p>Selecciona el tipo de flexibilidad que quieres agregar a tu reserva:</p>
+
+        <div class="checkout-transport-body-grid">
+          <form method="post" class="checkout-transport-form">
+            {% csrf_token %}
+
+            <div class="checkout-transport-radio-group">
+              <span>Solicitud</span>
+              <label>
+                <input type="radio" name="request_type" value="early" {% if flex_details.request_type == 'early' %}checked{% endif %} />
+                <i></i>
+                Early check-in
+              </label>
+              <label>
+                <input type="radio" name="request_type" value="late" {% if flex_details.request_type == 'late' %}checked{% endif %} />
+                <i></i>
+                Late check-out
+              </label>
+              <label>
+                <input type="radio" name="request_type" value="both" {% if flex_details.request_type == 'both' %}checked{% endif %} />
+                <i></i>
+                Ambos
+              </label>
+            </div>
+
+            <div class="checkout-transport-dates">
+              <div class="checkout-transport-date-row">
+                <span>Llegada</span>
+                <strong>{{ booking_summary.check_in|date:"d/m/y" }}</strong>
+                <em>-</em>
+                <strong>
+                  <select name="check_in_slot" class="checkout-transport-inline-select">
+                    <option value="11:00AM - 1:00PM" {% if flex_details.check_in_slot == '11:00AM - 1:00PM' %}selected{% endif %}>11:00AM - 1:00PM</option>
+                    <option value="1:00PM - 3:00PM" {% if flex_details.check_in_slot == '1:00PM - 3:00PM' %}selected{% endif %}>1:00PM - 3:00PM</option>
+                    <option value="3:00PM - 5:00PM" {% if flex_details.check_in_slot == '3:00PM - 5:00PM' %}selected{% endif %}>3:00PM - 5:00PM</option>
+                  </select>
+                </strong>
+              </div>
+              <div class="checkout-transport-date-row">
+                <span>Salida</span>
+                <strong>{{ booking_summary.check_out|date:"d/m/y" }}</strong>
+                <em>-</em>
+                <strong>
+                  <select name="check_out_slot" class="checkout-transport-inline-select">
+                    <option value="11:00AM - 1:00PM" {% if flex_details.check_out_slot == '11:00AM - 1:00PM' %}selected{% endif %}>11:00AM - 1:00PM</option>
+                    <option value="1:00PM - 3:00PM" {% if flex_details.check_out_slot == '1:00PM - 3:00PM' %}selected{% endif %}>1:00PM - 3:00PM</option>
+                    <option value="3:00PM - 5:00PM" {% if flex_details.check_out_slot == '3:00PM - 5:00PM' %}selected{% endif %}>3:00PM - 5:00PM</option>
+                  </select>
+                </strong>
+              </div>
+            </div>
+
+            <div class="checkout-transport-actions">
+              <button type="submit" name="action" value="back" class="checkout-transport-back">Volver</button>
+              <button type="submit" name="action" value="add" class="checkout-transport-add">Agregar</button>
+            </div>
+          </form>
+
+          <aside class="checkout-transport-service-summary">
+            <p>Resumen del servicio</p>
+            <div class="checkout-transport-service-summary__row"><span>Servicio</span><strong>{{ flex_service.title }}</strong></div>
+            <div class="checkout-transport-service-summary__row"><span>Solicitud</span><strong>{% if flex_details.request_type == "early" %}Early check-in{% elif flex_details.request_type == "late" %}Late check-out{% else %}Ambos{% endif %}</strong></div>
+            <div class="checkout-transport-service-summary__row"><span>Check-in</span><strong>{{ flex_details.check_in_slot }}</strong></div>
+            <div class="checkout-transport-service-summary__row"><span>Check-out</span><strong>{{ flex_details.check_out_slot }}</strong></div>
+            <div class="checkout-transport-service-summary__total"><span>Total:</span><strong>USD ${{ flex_service.price|floatformat:0 }}</strong></div>
+          </aside>
+        </div>
+      </div>
+
+      <aside class="checkout-transport-right">
+        <a href="#" class="checkout-transport-help">Necesitas ayuda para completar tu reserva?</a>
+        <div class="checkout-transport-summary">
+          <div class="checkout-transport-summary__property">
+            <div class="checkout-transport-summary__image">{% if checkout_image %}<img src="{{ checkout_image }}" alt="{{ property.display_title }}" />{% endif %}</div>
+            <div>
+              <p>{{ property.display_title }}</p>
+              <span>{{ property.display_neighborhood }}, {{ property.city.display_name }}, {{ property.city.display_country }}</span>
+            </div>
+          </div>
+
+          <div class="checkout-transport-summary__divider"></div>
+          <div class="checkout-transport-summary__row"><span>Fechas</span><strong>{{ booking_summary.check_in|date:"d M" }} - {{ booking_summary.check_out|date:"d M" }}</strong></div>
+          <div class="checkout-transport-summary__row"><span>{{ ui.property_guests }}</span><strong>{{ booking_summary.guests }} {% if current_language == 'es' %}personas{% else %}guests{% endif %}</strong></div>
+          <div class="checkout-transport-summary__divider"></div>
+          <div class="checkout-transport-price-row"><span>US$ {{ property.nightly_price|floatformat:2 }} x {{ booking_summary.nights }}</span><strong>US$ {{ booking_summary.nightly_subtotal|floatformat:2 }}</strong></div>
+          <div class="checkout-transport-price-row"><span>{{ ui.checkout_cleaning_fee }}</span><strong>US$ {{ property.cleaning_fee|floatformat:2 }}</strong></div>
+          <div class="checkout-transport-summary__divider"></div>
+          <div class="checkout-transport-price-row checkout-transport-price-row--discount"><span>{{ ui.checkout_discount }}</span><strong>US$ -{{ booking_summary.discount|floatformat:0 }}</strong></div>
+          <div class="checkout-transport-summary__divider"></div>
+          <div class="checkout-transport-price-row checkout-transport-price-row--total"><span>{{ ui.checkout_total }}</span><strong>US$ {{ booking_summary.total|floatformat:2 }}</strong></div>
+          <div class="checkout-transport-points"><p>{{ ui.checkout_points_copy }}</p><span>{{ checkout_points }} Wynwood Points</span><a href="#">{{ ui.checkout_points_link }}</a></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,14 @@
+<article class="property-card h-100">
+    {% if property.primary_image %}
+        <img src="{{ property.primary_image.image.url }}" alt="{{ property.display_title }}" class="img-fluid property-card-image">
+    {% endif %}
+    <div class="property-card-body">
+        <div class="property-meta">{{ property.city.display_name }} · {{ property.display_neighborhood }}</div>
+        <h3>{{ property.display_title }}</h3>
+        <p>{{ property.display_summary }}</p>
+        <div class="d-flex justify-content-between align-items-center mt-auto">
+            <div class="price">€{{ property.nightly_price }} / {{ ui.night }}</div>
+            <a href="{{ property.get_absolute_url }}" class="btn btn-outline-dark rounded-pill">{{ ui.property_details }}</a>
+        </div>
+    </div>
+</article>

@@ -1,0 +1,95 @@
+{% extends "bookings/base.html" %}
+
+{% block content %}
+<section class="hero-section hero-section-home">
+    <div class="hero-media" {% if hero_property and hero_property.primary_image %}style="background-image: linear-gradient(rgba(30, 22, 14, 0.16), rgba(30, 22, 14, 0.34)), url('{{ hero_property.primary_image.image.url }}');"{% else %}style="background-image: linear-gradient(rgba(30, 22, 14, 0.16), rgba(30, 22, 14, 0.34)), url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1600&q=80');"{% endif %}>
+        <div class="hero-overlay">
+            <div class="hero-copy-block">
+                <h1 class="hero-display">{{ ui.hero_title|upper }}</h1>
+                <p class="hero-kicker">{% if current_language == 'es' %}LO MEJOR DE DOS MUNDOS{% else %}BEST OF BOTH WORLDS{% endif %}</p>
+            </div>
+            <div class="hero-search-wrap">
+                {% include "bookings/partials/search_form.html" %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="destinations-section">
+    <div class="container-fluid destinations-shell">
+        <div class="destinations-head">
+            <h2>{% if current_language == 'es' %}DESCUBRE NUESTROS DESTINOS{% else %}DISCOVER OUR DESTINATIONS{% endif %}</h2>
+            <div class="destinations-arrows">
+                <button type="button" aria-label="Previous">&#8249;</button>
+                <button type="button" aria-label="Next">&#8250;</button>
+            </div>
+        </div>
+        <div class="destinations-grid">
+            {% for city in featured_cities %}
+                <article class="destination-card">
+                    {% if city.cover_property and city.cover_property.primary_image %}
+                        <img src="{{ city.cover_property.primary_image.image.url }}" alt="{{ city.display_name }}">
+                    {% else %}
+                        <img src="https://images.unsplash.com/photo-1517760444937-f6397edcbbcd?auto=format&fit=crop&w=900&q=80" alt="{{ city.display_name }}">
+                    {% endif %}
+                    <div class="destination-label">{{ city.display_name|upper }}</div>
+                </article>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section id="featured" class="section-block">
+    <div class="container">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">WH</p>
+                <h2>{{ ui.featured_title }}</h2>
+            </div>
+            <p>{{ ui.featured_text }}</p>
+        </div>
+        <div class="row g-4">
+            {% for property in featured_properties %}
+                <div class="col-md-6 col-xl-4 d-flex">
+                    {% include "bookings/partials/property_card.html" %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="section-block section-alt">
+    <div class="container">
+        <div class="row g-4 align-items-center">
+            <div class="col-lg-6">
+                <p class="eyebrow">{% if current_language == 'es' %}Espana{% else %}Spain{% endif %}</p>
+                <h2>{{ ui.why_spain_title }}</h2>
+                <p class="section-copy">{{ ui.why_spain_text }}</p>
+            </div>
+            <div class="col-lg-6">
+                <div class="city-grid">
+                    {% for city in featured_cities %}
+                        <div class="city-chip">
+                            <strong>{{ city.display_name }}</strong>
+                            <span>{{ city.display_copy }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="long-stay" class="section-block">
+    <div class="container">
+        <div class="cta-banner">
+            <div>
+                <p class="eyebrow">{% if current_language == 'es' %}Flexible{% else %}Flexible{% endif %}</p>
+                <h2>{{ ui.long_stay_title }}</h2>
+                <p>{{ ui.long_stay_text }}</p>
+            </div>
+            <a href="mailto:hello@wynwoodhouse.com" class="btn btn-light rounded-pill px-4">{{ ui.contact_us }}</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

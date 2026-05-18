@@ -1,0 +1,209 @@
+{% extends "bookings/base.html" %}
+{% load static %}
+
+{% block title %}{{ ui.checkout_title }} | Wynwood House{% endblock %}
+
+{% block body_class %}checkout-body{% endblock %}
+{% block main_class %}checkout-main{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'bookings/css/property-detail.css' %}" />
+  <link rel="stylesheet" href="{% static 'bookings/css/checkout.css' %}" />
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'bookings/js/checkout.js' %}"></script>
+{% endblock %}
+
+{% block site_header %}
+  {% include "bookings/partials/flow_header.html" %}
+{% endblock %}
+
+{% block site_footer %}
+  {% include "bookings/partials/checkout_footer.html" %}
+{% endblock %}
+
+{% block content %}
+  <section class="checkout-shell">
+    <div class="checkout-breadcrumb">
+      <span>*</span>
+      <a href="{% url 'home' %}">{{ property.city.display_country }}</a>
+      <i>|</i>
+      <a href="{% url 'search-results' %}?city={{ property.city_id }}">{{ property.city.display_name }}</a>
+      <i>|</i>
+      <a href="{{ property.get_absolute_url }}">{{ property.display_title }}</a>
+      <i>|</i>
+      <strong>{% if current_language == 'es' %}Registro{% else %}Checkout{% endif %}</strong>
+    </div>
+
+    <div class="checkout-layout">
+      <div class="checkout-form-column">
+        <form method="post" class="checkout-form" novalidate>
+          {% csrf_token %}
+          <section class="checkout-section">
+            <h2>{{ ui.checkout_register }}</h2>
+            {% if request.user.is_authenticated %}
+              <p>{% if current_language == 'es' %}Estas continuando la reserva con tu cuenta autenticada.{% else %}You are continuing this booking with your authenticated account.{% endif %}</p>
+            {% else %}
+              <p>{{ ui.checkout_email_help }}</p>
+
+              <label class="checkout-label" for="{{ register_form.email.id_for_label }}">{{ ui.property_email }}</label>
+              {{ register_form.email }}
+              {% if checkout_submitted and register_form.email.errors %}<small class="checkout-error">{{ register_form.email.errors|striptags }}</small>{% endif %}
+
+              <label class="checkout-label" for="{{ register_form.password1.id_for_label }}">{{ ui.checkout_create_password }}</label>
+              {{ register_form.password1 }}
+              {% if checkout_submitted and register_form.password1.errors %}<small class="checkout-error">{{ register_form.password1.errors|striptags }}</small>{% endif %}
+              <ul class="checkout-password-hints checkout-password-hints--live" id="checkoutPasswordHints" hidden></ul>
+              {% if checkout_submitted and register_form.password1.errors %}
+                <ul class="checkout-password-hints">
+                  {% for item in password_validation_items %}
+                    <li>{{ item }}</li>
+                  {% endfor %}
+                </ul>
+              {% elif checkout_submitted and register_form.is_bound and register_form.password1.value %}
+                <ul class="checkout-password-hints checkout-password-hints--valid">
+                  <li>{{ ui.checkout_password_valid }}</li>
+                </ul>
+              {% endif %}
+
+              <p class="checkout-login-copy">{{ ui.checkout_login_prompt }} <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">{{ ui.checkout_login_link }}</a></p>
+            {% endif %}
+          </section>
+
+          <section class="checkout-section checkout-section--services">
+            <h2>{{ ui.checkout_personal_info }}</h2>
+
+            <div class="checkout-grid checkout-grid--double">
+              <div>
+                {% if request.user.is_authenticated %}
+                  <label class="checkout-label">{{ ui.checkout_full_name }}</label>
+                  <input type="text" class="checkout-input" value="{{ request.user.first_name }}" disabled />
+                {% else %}
+                  <label class="checkout-label" for="{{ register_form.first_name.id_for_label }}">{{ ui.checkout_full_name }}</label>
+                  {{ register_form.first_name }}
+                  {% if checkout_submitted and register_form.first_name.errors %}<small class="checkout-error">{{ register_form.first_name.errors|striptags }}</small>{% endif %}
+                {% endif %}
+              </div>
+              <div>
+                <label class="checkout-label" for="{{ profile_form.nationality.id_for_label }}">{{ ui.checkout_nationality }}</label>
+                {{ profile_form.nationality }}
+                {% if checkout_submitted and profile_form.nationality.errors %}<small class="checkout-error">{{ profile_form.nationality.errors|striptags }}</small>{% endif %}
+              </div>
+            </div>
+
+            <div class="checkout-grid checkout-grid--double">
+              <div>
+                <label class="checkout-label" for="{{ profile_form.guest_phone.id_for_label }}">{{ ui.checkout_phone }}</label>
+                {{ profile_form.guest_phone }}
+                {% if checkout_submitted and profile_form.guest_phone.errors %}<small class="checkout-error">{{ profile_form.guest_phone.errors|striptags }}</small>{% endif %}
+              </div>
+              <div>
+                <label class="checkout-label" for="{{ profile_form.birth_date.id_for_label }}">{{ ui.checkout_birth_date }}</label>
+                {{ profile_form.birth_date }}
+                {% if checkout_submitted and profile_form.birth_date.errors %}<small class="checkout-error">{{ profile_form.birth_date.errors|striptags }}</small>{% endif %}
+              </div>
+            </div>
+
+            <div class="checkout-services-inline">
+              <h3 class="checkout-services-inline__title">{{ ui.checkout_special_services }}</h3>
+              <div id="selectedServicesInputs">
+                {% for service in additional_services %}
+                  {% if service.selected %}
+                    <input type="hidden" name="selected_services" value="{{ service.id }}" />
+                  {% endif %}
+                {% endfor %}
+              </div>
+              <div class="checkout-services">
+                {% for service in additional_services %}
+                  <article class="checkout-service-card" data-service-id="{{ service.id }}">
+                    <img src="{{ service.image }}" alt="{{ service.title }}" />
+                    <p>{{ service.title }}</p>
+                    <button type="button" class="checkout-service-toggle {% if service.selected %}is-selected{% endif %}">
+                      {% if service.selected %}- Quitar{% else %}+ Agregar{% endif %}
+                    </button>
+                  </article>
+                {% endfor %}
+              </div>
+            </div>
+          </section>
+
+          <section class="checkout-section checkout-section--compact">
+            <p class="checkout-legal">
+              {{ ui.checkout_legal }}
+            </p>
+
+            <button type="submit" class="checkout-submit">{{ ui.checkout_continue }}</button>
+
+            <div class="checkout-section-divider"></div>
+
+            <div class="checkout-newsletter">
+              {{ ui.checkout_newsletter_copy }}
+            </div>
+            <label class="checkout-check">
+              <input type="checkbox" name="newsletter_opt_out" />
+              <span>{{ ui.checkout_newsletter_opt_out }}</span>
+            </label>
+          </section>
+        </form>
+      </div>
+
+      <aside class="checkout-summary-column">
+        <a href="mailto:{{ site_settings.contact_cta_email|default:site_settings.contact_email }}" class="checkout-help-link">{{ ui.checkout_help }}</a>
+
+        <div class="checkout-summary-card">
+          <div class="checkout-summary-card__property">
+            <div class="checkout-summary-card__image">
+              {% if checkout_image %}
+                <img src="{{ checkout_image }}" alt="{{ property.display_title }}" />
+              {% endif %}
+            </div>
+            <div>
+              <p class="checkout-summary-card__title">{{ property.display_title }}</p>
+              <p class="checkout-summary-card__location">{{ property.display_neighborhood }}, {{ property.city.display_name }}, {{ property.city.display_country }}</p>
+            </div>
+          </div>
+
+          <div class="checkout-summary-card__divider"></div>
+
+          <div class="checkout-summary-row">
+            <span>{{ ui.checkout_dates }}</span>
+            <strong>{{ booking_summary.check_in|date:"d M" }} - {{ booking_summary.check_out|date:"d M" }}</strong>
+          </div>
+          <div class="checkout-summary-row">
+            <span>{{ ui.property_guests }}</span>
+            <strong>{{ booking_summary.guests }} personas</strong>
+          </div>
+
+          <div class="checkout-summary-card__divider"></div>
+
+          <div class="checkout-price-row">
+            <span>US$ {{ property.nightly_price|floatformat:2 }} x {{ booking_summary.nights }}</span>
+            <strong>US$ {{ booking_summary.nightly_subtotal|floatformat:2 }}</strong>
+          </div>
+          <div class="checkout-price-row">
+            <span>{{ ui.checkout_cleaning_fee }}</span>
+            <strong>US$ {{ property.cleaning_fee|floatformat:2 }}</strong>
+          </div>
+          <div class="checkout-price-row">
+            <span>{{ ui.checkout_service_fee }}</span>
+            <strong>US$ {{ property.service_fee|floatformat:2 }}</strong>
+          </div>
+
+          <div class="checkout-summary-card__divider"></div>
+
+          <div class="checkout-price-row checkout-price-row--total">
+            <span>{{ ui.checkout_total }}</span>
+            <strong>US$ {{ booking_summary.total|floatformat:2 }}</strong>
+          </div>
+
+          <div class="checkout-points-box">
+            <p>{{ ui.checkout_points_copy }}</p>
+            <span>{{ checkout_points }} Wynwood Points</span>
+            <a href="#">{{ ui.checkout_points_link }}</a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+{% endblock %}

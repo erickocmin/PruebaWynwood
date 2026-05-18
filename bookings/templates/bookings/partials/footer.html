@@ -1,0 +1,23 @@
+<footer class="site-footer">
+    <div class="container py-5">
+        <div class="row g-4 align-items-start">
+            <div class="col-md-5">
+                <div class="footer-brand">{% include "bookings/partials/wynwood_house_logo.html" %}</div>
+                <p class="mb-0">{{ ui.footer_copy }}</p>
+            </div>
+            <div class="col-md-3">
+                <h6>{{ ui.footer_contact }}</h6>
+                <p class="mb-1">{{ site_settings.contact_email|default:"hello@wynwoodhouse.com" }}</p>
+                <p class="mb-0">{{ site_settings.contact_phone|default:"+34 555 010 100" }}</p>
+            </div>
+            <div class="col-md-4">
+                <h6>{{ ui.footer_social }}</h6>
+                <div class="d-flex gap-3">
+                    <a href="{{ site_settings.instagram_url|default:'#' }}">Instagram</a>
+                    <a href="{{ site_settings.linkedin_url|default:'#' }}">LinkedIn</a>
+                    <a href="{{ site_settings.facebook_url|default:'#' }}">Facebook</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>

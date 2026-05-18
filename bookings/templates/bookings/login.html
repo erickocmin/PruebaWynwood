@@ -1,0 +1,16 @@
+{% extends "bookings/base.html" %}
+
+{% block content %}
+<section class="section-block pt-5">
+    <div class="container">
+        <div class="auth-shell mx-auto">
+            <h1 class="h3">{{ ui.login_title }}</h1>
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button class="btn btn-dark w-100 rounded-pill" type="submit">{{ ui.nav_login }}</button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

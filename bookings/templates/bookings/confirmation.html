@@ -1,0 +1,107 @@
+{% extends "bookings/base.html" %}
+{% load static %}
+
+{% block title %}{{ ui.confirmation_reserved }} | Wynwood House{% endblock %}
+
+{% block body_class %}confirmation-page-body{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'bookings/css/confirmation.css' %}" />
+{% endblock %}
+
+{% block site_header %}{% endblock %}
+{% block site_footer %}{% endblock %}
+
+{% block content %}
+  <nav class="confirmation-nav">
+    <div class="confirmation-nav__side"><span>{{ ui.header_menu }}</span><span>+</span></div>
+    <div class="confirmation-nav__brand">
+      <a href="{% url 'home' %}" class="confirmation-nav__logo navbar-brand">
+        {% include "bookings/partials/wynwood_house_logo.html" %}
+      </a>
+    </div>
+    <div class="confirmation-nav__links">
+      <span class="confirmation-nav__lang">
+        <a href="{% url 'set-language' 'en' %}?next={{ request.get_full_path|urlencode }}"><strong{% if current_language == 'en' %}>EN{% else %}>EN{% endif %}</strong></a> / <a href="{% url 'set-language' 'es' %}?next={{ request.get_full_path|urlencode }}">ES</a>
+      </span>
+      <a href="{% url 'login' %}">{{ ui.header_login }}</a>
+      <a href="{% url 'property-detail' booking.property.slug %}" class="confirmation-nav__cta">{{ ui.reserve_now }}</a>
+    </div>
+  </nav>
+
+  <section class="confirmation-hero">
+    <h1>{{ ui.confirmation_hello }}{% if guest_first_name %}, {{ guest_first_name }}{% endif %}!</h1>
+    <p>{{ ui.confirmation_thanks }}</p>
+  </section>
+
+  <section class="confirmation-image">
+    {% if confirmation_image %}
+      <img src="{{ confirmation_image }}" alt="{{ booking.property.display_title }}" />
+    {% else %}
+      <div class="confirmation-image__placeholder">Interior de apartamento</div>
+    {% endif %}
+  </section>
+
+  <section class="confirmation-copy">
+    <p>{{ ui.confirmation_ready }}</p>
+    <p>{{ ui.confirmation_email_notice }}</p>
+    <p>{{ ui.confirmation_questions }}</p>
+  </section>
+
+  <div class="confirmation-divider"></div>
+
+  <section class="confirmation-points">
+    <a href="mailto:{{ site_settings.contact_cta_email|default:site_settings.contact_email }}" class="confirmation-points__chat">{{ ui.confirmation_chat }}</a>
+    <p class="confirmation-points__label">{{ ui.confirmation_points_label }}</p>
+    <p class="confirmation-points__value">{{ confirmation_points }} Wynwood Points</p>
+    <a href="#" class="confirmation-points__link">{{ ui.confirmation_points_link }}</a>
+  </section>
+
+  <div class="confirmation-divider"></div>
+
+  <section class="confirmation-summary">
+    <h2>{{ booking.property.display_title }}</h2>
+    <p class="confirmation-summary__address">{{ booking.property.address }}. {{ booking.property.city.display_name }}, {{ booking.property.city.display_country }}</p>
+    <p class="confirmation-summary__dates">{{ booking.check_in|date:"F j, Y" }} - {{ booking.check_out|date:"F j, Y" }}</p>
+
+    <div class="confirmation-summary__items">
+      <div class="confirmation-summary__row">
+        <span>{{ booking_nights }} {{ ui.nights }}</span>
+        <span>US$ {{ nightly_subtotal|floatformat:2 }}</span>
+      </div>
+      <div class="confirmation-summary__row">
+        <span>{{ ui.confirmation_cleaning_fee }}</span>
+        <span>US$ {{ booking.property.cleaning_fee|floatformat:2 }}</span>
+      </div>
+      <div class="confirmation-summary__row confirmation-summary__row--discount">
+        <span>{{ ui.checkout_discount }}</span>
+        <span>US$ -{{ confirmation_discount|floatformat:2 }}</span>
+      </div>
+    </div>
+
+    <div class="confirmation-summary__total">
+      <span>{{ ui.checkout_total }}</span>
+      <span>US$ {{ booking.total_amount|floatformat:2 }}</span>
+    </div>
+  </section>
+
+  <section class="confirmation-upsell">
+    <p class="confirmation-upsell__intro">{{ ui.confirmation_additional }}</p>
+
+    <div class="confirmation-upsell__grid">
+      {% for service in confirmation_upsells %}
+        <article class="confirmation-upsell__item">
+          <img src="{{ service.image }}" alt="{{ service.label }}" />
+          <span>{{ service.label }}</span>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <footer class="confirmation-footer">
+    <a href="{{ site_settings.confirmation_policy_url|default:'#' }}" class="confirmation-footer__policy">{% if current_language == 'es' %}Politica de cancelacion{% else %}Cancellation policy{% endif %}</a>
+    <p class="confirmation-footer__tagline">{{ site_settings.confirmation_tagline|default:"Home Experience, Hotel Quality" }}</p>
+    <p class="confirmation-footer__social">{{ site_settings.confirmation_social|default:"@wynwood.house" }}</p>
+    <p class="confirmation-footer__copy">@{% now "Y" %}</p>
+  </footer>
+{% endblock %}

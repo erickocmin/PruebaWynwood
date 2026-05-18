@@ -1,0 +1,120 @@
+{% extends "bookings/base.html" %}
+{% load static %}
+
+{% block title %}{{ ui.search_results_title }} | Wynwood House{% endblock %}
+
+{% block body_class %}search-results-body{% endblock %}
+{% block main_class %}search-results-main{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="{% static 'bookings/css/search-results.css' %}" />
+{% endblock %}
+
+{% block site_footer %}{% endblock %}
+
+{% block content %}
+  <form method="get" action="{% url 'search-results' %}" class="results-filters">
+    <button class="results-grid-toggle" type="button" aria-label="{% if current_language == 'es' %}Vista en cuadrícula{% else %}Grid view{% endif %}">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+        <rect x="2" y="2" width="7" height="7" rx="1"></rect>
+        <rect x="11" y="2" width="7" height="7" rx="1"></rect>
+        <rect x="2" y="11" width="7" height="7" rx="1"></rect>
+        <rect x="11" y="11" width="7" height="7" rx="1"></rect>
+      </svg>
+    </button>
+
+    <div class="results-filter results-filter--select">
+      <span>{{ ui.results_city }}</span>
+      <span class="plus-icon">+</span>
+      {{ search_form.city }}
+    </div>
+
+    <div class="results-filter results-filter--ghost">
+      <span>{{ ui.results_neighborhood }}</span>
+      <span class="plus-icon">+</span>
+    </div>
+
+    <div class="results-filter results-filter--dates">
+      <span>{{ ui.results_dates }}</span>
+      <span class="plus-icon">+</span>
+      <div class="results-filter__dates">
+        {{ search_form.check_in }}
+        {{ search_form.check_out }}
+      </div>
+    </div>
+
+    <div class="results-filter results-filter--input">
+      <span>{{ ui.results_guests }}</span>
+      <span class="plus-icon">+</span>
+      {{ search_form.guests }}
+    </div>
+
+    <div class="results-filter results-filter--ghost">
+      <span>{{ ui.results_price_range }}</span>
+      <span class="plus-icon">+</span>
+    </div>
+
+    <div class="results-filter results-filter--ghost">
+      <span>{{ ui.results_amenities }}</span>
+      <span class="plus-icon">+</span>
+    </div>
+
+  </form>
+
+  <section class="results-layout">
+    <div class="results-listings">
+      <div class="results-grid" id="resultsGrid">
+        {% for property in properties %}
+          <a class="result-card" href="{{ property.get_absolute_url }}" data-gallery='{{ property.gallery_json|escape }}'>
+            <div class="result-card__gallery">
+              {% if property.gallery_urls %}
+                <img src="{{ property.gallery_urls.0 }}" alt="{{ property.display_title }}" class="result-card__image" loading="lazy" />
+              {% elif property.primary_image %}
+                <img src="{{ property.primary_image.image.url }}" alt="{{ property.display_title }}" class="result-card__image" loading="lazy" />
+              {% endif %}
+              <div class="result-card__dots">
+                {% for image_url in property.gallery_urls %}
+                  <span class="result-card__dot{% if forloop.first %} is-on{% endif %}"></span>
+                {% empty %}
+                  <span class="result-card__dot is-on"></span>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="result-card__body">
+              <div class="result-card__title">{{ property.display_title }}</div>
+              <div class="result-card__location">{{ property.display_neighborhood }}, {{ property.city.display_name }}, {{ property.city.display_country }}</div>
+              <div class="result-card__bottom">
+                <span class="result-card__price">US$ {{ property.nightly_price }} / {% if current_language == 'es' %}Noche{% else %}Night{% endif %}</span>
+                <div class="result-card__attrs">
+                  <span class="result-card__attr">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="6" r="3.5"></circle><path d="M3 18c0-4 3.1-7 7-7s7 3 7 7"></path></svg>
+                    {{ property.guests }}
+                  </span>
+                  <span class="result-card__attr">
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="9" width="16" height="7" rx="1.5"></rect><path d="M2 13V7a2 2 0 012-2h4a2 2 0 012 2v2M2 16v2M18 16v2"></path></svg>
+                    {{ property.bedrooms }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </a>
+        {% empty %}
+          <div class="results-empty">{{ ui.search_results_empty }}</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <aside class="results-map">
+      <div id="resultsMapCanvas"></div>
+    </aside>
+  </section>
+
+  {{ map_results|json_script:"results-map-data" }}
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{% static 'bookings/js/search-results.js' %}"></script>
+{% endblock %}

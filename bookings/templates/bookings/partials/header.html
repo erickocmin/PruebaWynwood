@@ -1,0 +1,52 @@
+<header class="site-header">
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid nav-shell">
+            <div class="header-left">
+                <button class="menu-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-label="{{ ui.header_menu }}">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+            <a class="navbar-brand fw-semibold" href="{% url 'home' %}">
+                {% include "bookings/partials/wynwood_house_logo.html" %}
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMenu">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 nav-links-row">
+                    {% for item in navigation_items %}
+                        <li class="nav-item"><a class="nav-link" href="{{ item.url }}">{{ item.display_title }}</a></li>
+                    {% endfor %}
+                </ul>
+                <div class="d-flex align-items-center nav-actions">
+                    <span class="nav-actions-separator">|</span>
+                    {% if request.user.is_authenticated %}
+                        <form method="post" action="{% url 'logout' %}" class="nav-actions-auth-form">
+                            {% csrf_token %}
+                            <button type="submit" class="nav-link nav-button-link nav-meta-link">{{ ui.nav_logout }}</button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="nav-link nav-meta-link">{{ ui.header_login }}</a>
+                    {% endif %}
+                    <span class="nav-actions-separator">|</span>
+                    <div class="language-switch">
+                        <a href="{% url 'set-language' 'en' %}?next={{ request.get_full_path|urlencode }}" class="{% if current_language == 'en' %}active{% endif %}">EN</a>
+                        <span>/</span>
+                        <a href="{% url 'set-language' 'es' %}?next={{ request.get_full_path|urlencode }}" class="{% if current_language == 'es' %}active{% endif %}">ES</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    {% if site_settings and site_settings.promo_text_es and site_settings.promo_text_en %}
+        <div class="promo-strip">
+            <div class="promo-copy">{% if current_language == 'es' %}{{ site_settings.promo_text_es }}{% else %}{{ site_settings.promo_text_en }}{% endif %}</div>
+            <div class="promo-timer">
+                {% if current_language == 'es' %}{{ site_settings.promo_timer_label_es|default:ui.promo_timer_fallback }}{% else %}{{ site_settings.promo_timer_label_en|default:ui.promo_timer_fallback }}{% endif %}
+                <strong>01</strong> h <strong>08</strong> m <strong>59</strong> s
+            </div>
+        </div>
+    {% endif %}
+</header>

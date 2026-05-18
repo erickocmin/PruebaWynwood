@@ -1,0 +1,37 @@
+<form method="get" action="{% url 'search-results' %}" class="search-panel search-panel-hero row g-0 align-items-center">
+    <div class="col-lg-2 col-md-6 search-cell">
+        <div class="search-field-trigger">
+            <span class="search-icon">⌕</span>
+            <span class="search-field-label">Ciudad o destino</span>
+        </div>
+        {{ search_form.city }}
+    </div>
+    <div class="col-lg-2 col-md-6 search-cell">
+        <div class="search-field-trigger">
+            <span class="search-icon">⚑</span>
+            <span class="search-field-label">Distrito</span>
+        </div>
+        <input type="text" name="district" placeholder="Distrito">
+    </div>
+    <div class="col-lg-4 col-md-6 search-cell">
+        <div class="search-field-trigger">
+            <span class="search-icon">☷</span>
+            <span class="search-field-label search-field-label-dates">Fechas de estancia</span>
+        </div>
+        <div class="date-range-fields">
+            {{ search_form.check_in }}
+            <span>/</span>
+            {{ search_form.check_out }}
+        </div>
+    </div>
+    <div class="col-lg-2 col-md-8 search-cell">
+        <div class="search-field-trigger">
+            <span class="search-icon">◔</span>
+            <span class="search-field-label">Numero de huespedes</span>
+        </div>
+        {{ search_form.guests }}
+    </div>
+    <div class="col-lg-2 col-md-4 search-action">
+        <button class="btn btn-dark rounded-pill hero-search-button" type="submit">BUSCAR</button>
+    </div>
+</form>

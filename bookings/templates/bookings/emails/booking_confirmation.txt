@@ -1,0 +1,13 @@
+{% if language == "es" %}Reserva confirmada{% else %}Booking confirmed{% endif %}
+
+{% if language == "es" %}
+Tu reserva para {{ booking.property.title_es }} fue confirmada.
+{% else %}
+Your reservation for {{ booking.property.title_en }} has been confirmed.
+{% endif %}
+
+Check-in: {{ booking.check_in }}
+Check-out: {{ booking.check_out }}
+Total: €{{ booking.total_amount }}
+
+{{ absolute_url }}

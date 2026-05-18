@@ -1,0 +1,29 @@
+<header class="property-detail-header">
+  <div class="property-detail-header__left">
+    <span>{{ ui.header_menu }}</span>
+    <span class="property-detail-header__plus">+</span>
+  </div>
+
+  <a href="{% url 'home' %}" class="property-detail-header__logo navbar-brand">
+    {% include "bookings/partials/wynwood_house_logo.html" %}
+  </a>
+
+  <nav class="property-detail-header__right">
+    <div class="property-detail-header__lang">
+      <a href="{% url 'set-language' 'en' %}?next={{ request.get_full_path|urlencode }}" class="{% if current_language == 'en' %}active{% endif %}">EN</a>
+      <span>/</span>
+      <a href="{% url 'set-language' 'es' %}?next={{ request.get_full_path|urlencode }}" class="{% if current_language == 'es' %}active{% endif %}">ES</a>
+    </div>
+    {% if request.user.is_authenticated %}
+      <form method="post" action="{% url 'logout' %}" class="nav-actions-auth-form">
+        {% csrf_token %}
+        <button type="submit" class="nav-link nav-button-link nav-meta-link">{{ ui.nav_logout }}</button>
+      </form>
+    {% else %}
+      <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">{{ ui.header_login }}</a>
+    {% endif %}
+    {% if property %}
+      <a href="{% url 'checkout' %}?property_slug={{ property.slug }}" class="property-detail-header__reserve">{{ ui.reserve_now }}</a>
+    {% endif %}
+  </nav>
+</header>

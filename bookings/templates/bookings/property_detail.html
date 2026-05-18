@@ -1,0 +1,282 @@
+{% extends "bookings/base.html" %}
+{% load static %}
+
+{% block title %}{{ property.display_title }} | Wynwood House{% endblock %}
+{% block body_class %}property-detail-body{% endblock %}
+{% block main_class %}property-detail-main{% endblock %}
+{% block extra_css %}
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+<link rel="stylesheet" href="{% static 'bookings/css/property-detail.css' %}" />
+<link rel="stylesheet" href="{% static 'bookings/css/checkout.css' %}" />
+{% endblock %}
+
+{% block site_header %}
+  {% include "bookings/partials/flow_header.html" %}
+{% endblock %}
+
+{% block site_footer %}
+  {% include "bookings/partials/checkout_footer.html" %}
+{% endblock %}
+
+{% block content %}
+<section class="property-detail-shell">
+  <div class="property-breadcrumb">
+    <a href="{% url 'home' %}">{{ property.city.display_country }}</a>
+    <span>/</span>
+    <a href="{% url 'search-results' %}?city={{ property.city_id }}"
+      >{{ property.city.display_name }}</a
+    >
+    <span>/</span>
+    <span>{{ property.display_title }}</span>
+  </div>
+
+  <section
+    class="property-gallery"
+    data-gallery="{{ property_gallery_json|escape }}"
+  >
+    <div class="property-gallery__main">
+      <img
+        id="propertyGalleryMain"
+          src="{{ property_gallery.0.url|default:'/media/properties/natural1brwithprivateterrace2.png' }}"
+        alt="{{ property_gallery.0.alt|default:property.display_title }}"
+        loading="eager"
+        onerror="
+          this.onerror = null;
+          this.src = '/media/properties/natural1brwithprivateterrace2.png';
+        "
+      />
+    </div>
+    <div class="property-gallery__side">
+      {% for image in property_gallery|slice:"1:3" %}
+      <button
+        type="button"
+        class="property-gallery__thumb{% if forloop.last %} property-gallery__thumb--more{% endif %}"
+        data-gallery-index="{{ forloop.counter }}"
+      >
+        <img
+          src="{{ image.url }}"
+          alt="{{ image.alt|default:property.display_title }}"
+          loading="lazy"
+          onerror="
+            this.onerror = null;
+            this.src = '/media/properties/natural1brwithprivateterrace2.png';
+          "
+        />
+        {% if forloop.last and property_gallery|length > 3 %}
+        <span class="property-gallery__more"
+          >+{{ property_gallery|length|add:"-2" }}</span
+        >
+        {% endif %}
+      </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="property-detail-grid">
+    <div class="property-detail-copy">
+      <header class="property-hero-copy">
+        <h1>{{ property.display_title }}</h1>
+        <p class="property-hero-copy__location">
+          {{ property.display_neighborhood }}, {{ property.city.display_name }},
+          {{ property.city.display_country }}
+        </p>
+        <div class="property-hero-copy__meta">
+          <span>{{ property.guests }} {% if current_language == 'es' %}Invitados{% else %}Guests{% endif %}</span>
+          <span>{{ property.bedrooms }} {% if current_language == 'es' %}Habitaciones{% else %}Bedrooms{% endif %}</span>
+          <span>{{ property.bathrooms }} {% if current_language == 'es' %}Banos{% else %}Bathrooms{% endif %}</span>
+        </div>
+      </header>
+
+      <div class="property-copy-block">
+        <p>{{ property.display_summary }}</p>
+        <p>{{ property.display_description }}</p>
+        <p>{{ property.address }}</p>
+      </div>
+
+      <section class="property-section">
+        <h2>{{ ui.property_amenities }}</h2>
+        <div class="property-amenities-grid">
+          {% for amenity in amenities %}
+          <article class="property-amenity">
+            <div class="property-amenity__icon">
+              {% if amenity.key == "elevator" %}
+              <svg viewBox="0 0 40 40">
+                <rect x="8" y="4" width="24" height="32" rx="2"></rect>
+                <line x1="20" y1="4" x2="20" y2="36"></line>
+                <polyline points="13,14 20,8 27,14"></polyline>
+                <polyline points="13,26 20,32 27,26"></polyline>
+              </svg>
+              {% elif amenity.key == "parking" %}
+              <svg viewBox="0 0 40 40">
+                <rect x="5" y="10" width="30" height="20" rx="2"></rect>
+                <path d="M14,10 L14,6 Q14,4 16,4 L18,4"></path>
+                <path d="M26,10 L26,6 Q26,4 24,4 L22,4"></path>
+                <text
+                  x="20"
+                  y="24"
+                  text-anchor="middle"
+                  font-size="12"
+                  stroke-width="1"
+                  font-family="sans-serif"
+                  fill="#111"
+                  stroke="none"
+                >
+                  P
+                </text>
+              </svg>
+              {% elif amenity.key == "tv" %}
+              <svg viewBox="0 0 40 40">
+                <rect x="4" y="8" width="32" height="22" rx="2"></rect>
+                <line x1="14" y1="30" x2="12" y2="36"></line>
+                <line x1="26" y1="30" x2="28" y2="36"></line>
+                <line x1="10" y1="36" x2="30" y2="36"></line>
+                <text
+                  x="13"
+                  y="22"
+                  font-size="7"
+                  stroke="none"
+                  fill="#111"
+                  font-family="sans-serif"
+                >
+                  SMART
+                </text>
+              </svg>
+              {% elif amenity.key == "doorman" %}
+              <svg viewBox="0 0 40 40">
+                <circle cx="20" cy="10" r="5"></circle>
+                <path d="M10,36 L10,24 Q10,16 20,16 Q30,16 30,24 L30,36"></path>
+                <rect x="15" y="6" width="10" height="3" rx="1"></rect>
+              </svg>
+              {% elif amenity.key == "balcony" %}
+              <svg viewBox="0 0 40 40">
+                <rect x="6" y="22" width="28" height="14" rx="1"></rect>
+                <rect x="10" y="10" width="20" height="12" rx="1"></rect>
+                <line x1="6" y1="22" x2="34" y2="22"></line>
+                <line x1="14" y1="22" x2="14" y2="36"></line>
+                <line x1="26" y1="22" x2="26" y2="36"></line>
+                <line x1="6" y1="36" x2="34" y2="36"></line>
+              </svg>
+              {% else %}
+              <svg viewBox="0 0 40 40">
+                <path d="M8,16 Q20,4 32,16"></path>
+                <path d="M8,16 L20,32 L32,16"></path>
+                <line x1="20" y1="32" x2="20" y2="38"></line>
+                <line x1="14" y1="36" x2="26" y2="36"></line>
+                <circle cx="20" cy="16" r="6"></circle>
+              </svg>
+              {% endif %}
+            </div>
+            <span>{{ amenity.label }}</span>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="property-section">
+        <h2>{{ ui.property_bedrooms }}</h2>
+        <div class="property-bedroom">
+          <span class="property-bedroom__eyebrow">{{ ui.property_distribution }}</span>
+          <div class="property-bedroom__card">
+            <svg viewBox="0 0 44 44">
+              <rect x="4" y="18" width="36" height="20" rx="2"></rect>
+              <path
+                d="M4,26 L4,14 Q4,12 6,12 L38,12 Q40,12 40,14 L40,26"
+              ></path>
+              <rect x="8" y="20" width="12" height="8" rx="1"></rect>
+              <rect x="24" y="20" width="12" height="8" rx="1"></rect>
+              <line x1="4" y1="30" x2="40" y2="30"></line>
+            </svg>
+            <div>
+              <strong>{{ property.bedrooms }} {% if current_language == 'es' %}Habitacion{% if property.bedrooms != 1 %}es{% endif %}{% else %}Bedroom{% if property.bedrooms != 1 %}s{% endif %}{% endif %}</strong>
+              <span>{% if current_language == 'es' %}Espacio para {{ property.guests }} huespedes{% else %}Space for {{ property.guests }} guests{% endif %}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <aside class="property-booking-card">
+      <div class="property-booking-card__tabs">
+        <button
+          type="button"
+          class="property-tab is-active"
+          data-rate-mode="daily"
+        >
+          {% if current_language == 'es' %}Diario{% else %}Daily{% endif %}
+        </button>
+        <button type="button" class="property-tab" data-rate-mode="monthly">
+          {% if current_language == 'es' %}Mensual{% else %}Monthly{% endif %}
+        </button>
+      </div>
+
+      <div
+        class="property-booking-card__price"
+        data-daily="US$ {{ property.nightly_price|floatformat:2 }} / {% if current_language == 'es' %}noche{% else %}night{% endif %}"
+        data-monthly="US$ {{ property.nightly_price|floatformat:2 }} x 28 {% if current_language == 'es' %}noches{% else %}nights{% endif %}"
+      >
+        US$ {{ property.nightly_price|floatformat:2 }} / {% if current_language == 'es' %}noche{% else %}night{% endif %}
+      </div>
+
+      {% if booking_form.non_field_errors %}
+      <div class="property-booking-card__errors">
+        {{ booking_form.non_field_errors }}
+      </div>
+      {% endif %}
+
+      <form
+        method="post"
+        action="{% url 'begin-checkout' property.slug %}"
+        class="property-booking-form"
+        id="propertyBookingForm"
+      >
+        {% csrf_token %}
+        <label class="booking-field">
+          <span>{{ ui.property_check_dates }}</span>
+          {{ booking_form.check_in }}
+          {% if booking_form.check_in.errors %}<small class="checkout-error">{{ booking_form.check_in.errors|striptags }}</small>{% endif %}
+        </label>
+
+        <label class="booking-field">
+          <span>{{ ui.check_out }}</span>
+          {{ booking_form.check_out }}
+          {% if booking_form.check_out.errors %}<small class="checkout-error">{{ booking_form.check_out.errors|striptags }}</small>{% endif %}
+        </label>
+
+        <label class="booking-field booking-field--split">
+          <span>{{ ui.property_guests }}</span>
+          {{ booking_form.guests }}
+          {% if booking_form.guests.errors %}<small class="checkout-error">{{ booking_form.guests.errors|striptags }}</small>{% endif %}
+        </label>
+
+        <label class="booking-field">
+          <span>{{ ui.property_special_request }}</span>
+          {{ booking_form.special_request }}
+          {% if booking_form.special_request.errors %}<small class="checkout-error">{{ booking_form.special_request.errors|striptags }}</small>{% endif %}
+        </label>
+
+        <button type="submit" class="property-booking-form__submit">
+          {{ ui.reserve_now }}
+        </button>
+      </form>
+    </aside>
+
+    <section class="property-section property-section--full-width property-section--map">
+      <h2>{{ ui.property_location }}</h2>
+      <div class="property-map-card">
+        <div id="propertyDetailMap" class="property-map-card__canvas"></div>
+      </div>
+    </section>
+  </section>
+</section>
+
+{{ detail_map_data|json_script:"property-detail-map-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'bookings/js/property-detail.js' %}"></script>
+{% endblock %}

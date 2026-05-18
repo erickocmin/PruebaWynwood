@@ -1,0 +1,429 @@
+{% extends "bookings/base.html" %}
+{% load static %}
+
+{% block title %}Metodo de Pago | Wynwood House{% endblock %}
+
+{% block body_class %}checkout-payment-body{% endblock %}
+{% block main_class %}checkout-payment-main{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'bookings/css/property-detail.css' %}" />
+  <link rel="stylesheet" href="{% static 'bookings/css/checkout-payment.css' %}" />
+{% endblock %}
+
+{% block extra_js %}
+  <script src="{% static 'bookings/js/checkout-payment.js' %}"></script>
+{% endblock %}
+
+{% block site_footer %}
+  {% include "bookings/partials/checkout_footer.html" %}
+{% endblock %}
+
+{% block content %}
+  <section class="checkout-payment-shell">
+    <div class="checkout-payment-breadcrumb">
+      <span>*</span>
+      <a href="{% url 'home' %}">{{ property.city.display_country }}</a>
+      <i>|</i>
+      <a href="{% url 'search-results' %}?city={{ property.city_id }}">{{ property.city.display_name }}</a>
+      <i>|</i>
+      <a href="{{ property.get_absolute_url }}">{{ property.display_title }}</a>
+      <i>|</i>
+      <strong>{{ ui.checkout_payment_title }}</strong>
+    </div>
+
+    <div class="checkout-payment-layout">
+      <div class="checkout-payment-left">
+        <h1 class="checkout-payment-welcome-title">{% if current_language == 'es' %}Bienvenido a Wynwood House {{ guest_name }}!{% else %}Welcome to Wynwood House {{ guest_name }}!{% endif %}</h1>
+        <p>{{ ui.checkout_services_intro }}</p>
+
+        <section class="checkout-payment-section">
+          <h2>{{ ui.checkout_upgrade }}</h2>
+          <p>{% if current_language == 'es' %}Disfruta de una estadia sin complicaciones con nuestros servicios adicionales.{% else %}Enjoy a smoother stay with our additional services.{% endif %}</p>
+          <div class="checkout-payment-services">
+            {% for service in additional_services %}
+              <article class="checkout-payment-service-card">
+                <img src="{{ service.image }}" alt="{{ service.title }}" />
+                <p>{{ service.title }}</p>
+                {% if service.id == 'flex' %}
+                  <a href="{% url 'checkout-flex' %}" class="checkout-payment-service-link {% if service.selected %}is-selected{% endif %}">
+                    {% if service.selected %}Editar{% else %}+ Agregar{% endif %}
+                  </a>
+                {% elif service.id == 'transport' %}
+                  <a href="{% url 'checkout-transport' %}" class="checkout-payment-service-link {% if service.selected %}is-selected{% endif %}">
+                    {% if service.selected %}Editar{% else %}+ Agregar{% endif %}
+                  </a>
+                {% else %}
+                  <button type="button" class="{% if service.selected %}is-selected{% endif %}">
+                    {% if service.selected %}- Quitar{% else %}+ Agregar{% endif %}
+                  </button>
+                {% endif %}
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+
+        <section class="checkout-payment-section">
+          <h2>{{ ui.checkout_payment_title }}</h2>
+          <form method="post" class="checkout-payment-form">
+            {% csrf_token %}
+            <input type="hidden" name="payment-accept_terms" value="on" />
+            <input type="hidden" name="payment_method" id="paymentMethodInput" value="" />
+
+            {% if confirmation_error %}
+              <div class="checkout-payment-error">{{ confirmation_error }}</div>
+            {% endif %}
+
+            <div class="checkout-payment-method-stage">
+            <div class="checkout-payment-options" data-payment-options>
+              <button type="button" class="checkout-payment-option" data-payment-option="card">
+                <svg viewBox="0 0 28 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="28" height="20" rx="3" fill="#E0E0E0"/><rect x="0" y="6" width="28" height="5" fill="#BDBDBD"/><rect x="3" y="13" width="8" height="2" rx="1" fill="#9E9E9E"/></svg>
+                {% if current_language == 'es' %}Pago con tarjeta Debito / Credito{% else %}Pay with debit / credit card{% endif %}
+              </button>
+
+              <button type="button" class="checkout-payment-apple" data-payment-option="apple">
+                <span>&#63743;</span> {% if current_language == 'es' %}Pagar con <strong>Apple Pay</strong>{% else %}Pay with <strong>Apple Pay</strong>{% endif %}
+              </button>
+
+              <button type="button" class="checkout-payment-google" data-payment-option="google">
+                <span>Google</span> Pay
+              </button>
+            </div>
+
+            <div class="checkout-payment-card-panel" data-payment-panel="card">
+              <div class="checkout-payment-card-head">
+                <div>
+                  <h3>{% if current_language == 'es' %}Informacion de pago{% else %}Payment information{% endif %}</h3>
+                  <p>{{ ui.checkout_payment_intro }}</p>
+                </div>
+                <button type="button" class="checkout-payment-change">{{ ui.checkout_change }}</button>
+              </div>
+
+              <div class="checkout-payment-card-inline">
+                  <span>{% if current_language == 'es' %}Numero de tarjeta{% else %}Card number{% endif %}</span>
+                  <em>{% if current_language == 'es' %}Pago seguro procesado en entorno de pruebas{% else %}Secure payment processed in test environment{% endif %}</em>
+              </div>
+
+              <label class="checkout-payment-card-number">
+                {{ checkout_form.card_number }}
+                <svg viewBox="0 0 22 16" xmlns="http://www.w3.org/2000/svg"><rect x="0.5" y="0.5" width="21" height="15" rx="2" fill="#e8e8e8" stroke="#ccc"/><line x1="0" y1="4" x2="22" y2="4" stroke="#ccc" stroke-width="3"/><rect x="2" y="9" width="6" height="2" rx="1" fill="#bbb"/></svg>
+                {% if checkout_form.card_number.errors %}<small>{{ checkout_form.card_number.errors|striptags }}</small>{% endif %}
+              </label>
+
+              <div class="checkout-payment-card-grid checkout-payment-card-grid--two">
+                <label>
+                  <span>{% if current_language == 'es' %}Caducidad{% else %}Expiry date{% endif %}</span>
+                  <input type="text" name="card_expiry_label" placeholder="MM/AAAA" />
+                </label>
+                <label>
+                  <span>{% if current_language == 'es' %}Codigo CVV{% else %}CVV code{% endif %}</span>
+                  {{ checkout_form.cvv }}
+                  {% if checkout_form.cvv.errors %}<small>{{ checkout_form.cvv.errors|striptags }}</small>{% endif %}
+                </label>
+              </div>
+
+              <label class="checkout-payment-select-wrap">
+                <select name="installments">
+                  <option value="">{% if current_language == 'es' %}Seleccionar numero de cuotas{% else %}Select installments{% endif %}</option>
+                  <option>{% if current_language == 'es' %}1 cuota{% else %}1 installment{% endif %}</option>
+                  <option>{% if current_language == 'es' %}3 cuotas{% else %}3 installments{% endif %}</option>
+                  <option>{% if current_language == 'es' %}6 cuotas{% else %}6 installments{% endif %}</option>
+                  <option>{% if current_language == 'es' %}12 cuotas{% else %}12 installments{% endif %}</option>
+                </select>
+              </label>
+
+              <div class="checkout-payment-billing-head">{% if current_language == 'es' %}Datos de Facturacion{% else %}Billing details{% endif %}</div>
+
+              <label>
+                <span>{% if current_language == 'es' %}Nombre del titular{% else %}Cardholder name{% endif %}</span>
+                {{ checkout_form.cardholder_name }}
+                {% if checkout_form.cardholder_name.errors %}<small>{{ checkout_form.cardholder_name.errors|striptags }}</small>{% endif %}
+              </label>
+
+              <div class="checkout-payment-card-grid checkout-payment-card-grid--two">
+                <label>
+                  <span>{% if current_language == 'es' %}Direccion{% else %}Address{% endif %}</span>
+                  {{ checkout_form.billing_address }}
+                  {% if checkout_form.billing_address.errors %}<small>{{ checkout_form.billing_address.errors|striptags }}</small>{% endif %}
+                </label>
+                <label>
+                  <span>{% if current_language == 'es' %}Direccion 2 (opcional){% else %}Address 2 (optional){% endif %}</span>
+                  <input type="text" name="billing_address_2" placeholder="{% if current_language == 'es' %}Complemento de direccion{% else %}Address details{% endif %}" />
+                </label>
+              </div>
+
+              <div class="checkout-payment-card-grid checkout-payment-card-grid--two">
+                <label class="checkout-payment-select-wrap">
+                  <span>{% if current_language == 'es' %}Pais{% else %}Country{% endif %}</span>
+                  {{ checkout_form.billing_country }}
+                  {% if checkout_form.billing_country.errors %}<small>{{ checkout_form.billing_country.errors|striptags }}</small>{% endif %}
+                </label>
+                <label>
+                  <span>{% if current_language == 'es' %}Estado / Region{% else %}State / Region{% endif %}</span>
+                  {{ checkout_form.billing_region }}
+                  {% if checkout_form.billing_region.errors %}<small>{{ checkout_form.billing_region.errors|striptags }}</small>{% endif %}
+                </label>
+              </div>
+
+              <div class="checkout-payment-card-grid checkout-payment-card-grid--two">
+                <label>
+                  <span>{{ ui.results_city }}</span>
+                  {{ checkout_form.billing_city }}
+                  {% if checkout_form.billing_city.errors %}<small>{{ checkout_form.billing_city.errors|striptags }}</small>{% endif %}
+                </label>
+                <label>
+                  <span>{% if current_language == 'es' %}Codigo postal{% else %}Postal code{% endif %}</span>
+                  {{ checkout_form.billing_postal_code }}
+                  {% if checkout_form.billing_postal_code.errors %}<small>{{ checkout_form.billing_postal_code.errors|striptags }}</small>{% endif %}
+                </label>
+              </div>
+
+              <div class="checkout-payment-card-grid checkout-payment-card-grid--two hidden-native-fields">
+                <label>
+                  <span>{% if current_language == 'es' %}Mes interno{% else %}Internal month{% endif %}</span>
+                  {{ checkout_form.expiry_month }}
+                  {% if checkout_form.expiry_month.errors %}<small>{{ checkout_form.expiry_month.errors|striptags }}</small>{% endif %}
+                </label>
+                <label>
+                  <span>{% if current_language == 'es' %}Internal year{% else %}Internal year{% endif %}</span>
+                  {{ checkout_form.expiry_year }}
+                  {% if checkout_form.expiry_year.errors %}<small>{{ checkout_form.expiry_year.errors|striptags }}</small>{% endif %}
+                </label>
+              </div>
+
+              <label class="checkout-payment-check checkout-payment-check--confirm">
+                <input type="checkbox" name="cardholder_same_person" {% if request.POST.cardholder_same_person %}checked{% endif %} />
+                <span>{% if current_language == 'es' %}Marca esta casilla para confirmar que el titular de la tarjeta es la misma persona que realiza la reserva{% else %}Check this box to confirm the cardholder is the same person making the booking{% endif %}</span>
+              </label>
+            </div>
+
+            <div class="checkout-payment-apple-panel" data-payment-panel="apple">
+              <div class="checkout-payment-apple-head">
+                <button type="button" class="checkout-payment-change">Cambiar</button>
+              </div>
+
+              <button type="button" class="checkout-payment-apple checkout-payment-apple--full"><span>&#63743;</span> {% if current_language == 'es' %}Pagar con <strong>Apple Pay</strong>{% else %}Pay with <strong>Apple Pay</strong>{% endif %}</button>
+
+              <div class="checkout-payment-apple-checks">
+                <label class="checkout-payment-check">
+                  <input type="checkbox" name="accept_terms_apple" />
+                  <span>
+                    {{ ui.checkout_accept_terms }}
+                  </span>
+                </label>
+                <label class="checkout-payment-check">
+                  <input type="checkbox" name="newsletter_opt_in_apple" />
+                  <span>{{ ui.checkout_subscribe_newsletter }}</span>
+                </label>
+              </div>
+
+              <div class="checkout-payment-apple-actions">
+                <a href="{% url 'checkout' %}" class="checkout-payment-back">{{ ui.checkout_back }}</a>
+                <button type="submit" class="checkout-payment-submit checkout-payment-submit--dark" data-apple-submit>{{ ui.checkout_complete }}</button>
+              </div>
+            </div>
+
+            <div class="checkout-payment-google-panel" data-payment-panel="google">
+              <div class="checkout-payment-apple-head">
+                <button type="button" class="checkout-payment-change">Cambiar</button>
+              </div>
+
+              <button type="button" class="checkout-payment-google checkout-payment-google--full"><span>Google</span> Pay</button>
+
+              <div class="checkout-payment-apple-checks">
+                <label class="checkout-payment-check">
+                  <input type="checkbox" name="accept_terms_google" />
+                  <span>
+                    {{ ui.checkout_accept_terms }}
+                  </span>
+                </label>
+                <label class="checkout-payment-check">
+                  <input type="checkbox" name="newsletter_opt_in_google" />
+                  <span>{{ ui.checkout_subscribe_newsletter }}</span>
+                </label>
+              </div>
+
+              <div class="checkout-payment-apple-actions">
+                <a href="{% url 'checkout' %}" class="checkout-payment-back">{{ ui.checkout_back }}</a>
+                <button type="submit" class="checkout-payment-submit checkout-payment-submit--dark" data-google-submit>{{ ui.checkout_complete }}</button>
+              </div>
+            </div>
+            </div>
+
+              <div class="checkout-payment-common-actions is-hidden" data-payment-common-actions>
+              <p class="checkout-payment-legal">
+                {{ ui.checkout_legal }}
+              </p>
+
+              <button type="submit" class="checkout-payment-submit">{{ ui.checkout_complete }}</button>
+            </div>
+          </form>
+        </section>
+
+        <div class="checkout-payment-apple-modal" data-apple-modal hidden>
+          <div class="checkout-payment-apple-modal__backdrop" data-apple-modal-close></div>
+          <div class="checkout-payment-apple-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="apple-pay-modal-title">
+            <div class="checkout-payment-apple-modal__head">
+              <div class="checkout-payment-apple-modal__logo" id="apple-pay-modal-title"><span>&#63743;</span>Pay</div>
+              <button type="button" class="checkout-payment-apple-modal__close" aria-label="Cerrar" data-apple-modal-close>
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </button>
+            </div>
+
+            <div class="checkout-payment-apple-modal__body">
+              <article class="checkout-payment-apple-sheet">
+                <div class="checkout-payment-apple-sheet__icon">
+                  <div class="checkout-payment-apple-sheet__card"></div>
+                </div>
+                <div class="checkout-payment-apple-sheet__copy">
+                  <div class="checkout-payment-apple-sheet__title">{% if current_language == 'es' %}Tarjeta guardada{% else %}Saved card{% endif %}</div>
+                  <div class="checkout-payment-apple-sheet__text checkout-payment-apple-sheet__text--dots">•••• 1234</div>
+                  <div class="checkout-payment-apple-sheet__text checkout-payment-apple-sheet__text--muted">{% if current_language == 'es' %}Direccion protegida del titular{% else %}Cardholder address protected{% endif %}</div>
+                </div>
+              </article>
+
+              <article class="checkout-payment-apple-sheet">
+                <div class="checkout-payment-apple-sheet__icon">
+                  <div class="checkout-payment-apple-sheet__system">
+                    <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                  </div>
+                </div>
+                <div class="checkout-payment-apple-sheet__copy">
+                  <div class="checkout-payment-apple-sheet__label">{% if current_language == 'es' %}Contacto{% else %}Contact{% endif %}</div>
+                  <div class="checkout-payment-apple-sheet__title checkout-payment-apple-sheet__title--normal">{{ request.user.email|default:"-" }}</div>
+                  <div class="checkout-payment-apple-sheet__text">{{ site_settings.contact_phone|default:"+34 555 010 100" }}</div>
+                </div>
+              </article>
+
+              <article class="checkout-payment-apple-sheet">
+                <div class="checkout-payment-apple-sheet__icon">
+                  <div class="checkout-payment-apple-sheet__system">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                  </div>
+                </div>
+                <div class="checkout-payment-apple-sheet__copy">
+                  <div class="checkout-payment-apple-sheet__label">{% if current_language == 'es' %}Direccion de facturacion{% else %}Billing address{% endif %}</div>
+                  <div class="checkout-payment-apple-sheet__title checkout-payment-apple-sheet__title--normal">{{ guest_name|default:"Guest" }}</div>
+                  <div class="checkout-payment-apple-sheet__text">{% if current_language == 'es' %}Los datos completos se cargan al confirmar el pago{% else %}Full billing details are loaded when payment is confirmed{% endif %}</div>
+                </div>
+              </article>
+            </div>
+
+            <div class="checkout-payment-apple-modal__foot">
+              <div class="checkout-payment-apple-modal__merchant">
+                <div>{{ site_settings.site_name|default:"Wynwood House" }}</div>
+                <strong>US$ {{ booking_summary.total|floatformat:2 }}</strong>
+              </div>
+              <div class="checkout-payment-apple-modal__action">
+                <button type="button" class="checkout-payment-apple-modal__continue" data-apple-modal-continue>Continuar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="checkout-payment-google-modal" data-google-modal hidden>
+          <div class="checkout-payment-google-modal__backdrop" data-google-modal-close></div>
+          <div class="checkout-payment-google-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="google-pay-modal-title">
+            <div class="checkout-payment-google-modal__topbar">
+              <div class="checkout-payment-google-modal__brand">
+                <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908C16.658 14.013 17.64 11.705 17.64 9.2z" fill="#4285F4"/>
+                  <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+                  <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                  <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                </svg>
+                Pay
+              </div>
+              <span class="checkout-payment-google-modal__url">pay.google.com</span>
+              <button type="button" class="checkout-payment-google-modal__close" data-google-modal-close>✕</button>
+            </div>
+
+            <div class="checkout-payment-google-modal__body">
+              <p class="checkout-payment-google-modal__title">{% if current_language == 'es' %}Completa tu compra{% else %}Complete your purchase{% endif %}</p>
+
+              <div class="checkout-payment-google-modal__account-wrap">
+                <div class="checkout-payment-google-modal__account-pill">
+                  <div class="checkout-payment-google-modal__avatar">{{ guest_name|first|default:"J"|upper }}</div>
+                  <span>{{ request.user.email|default:"-" }}</span>
+                  <i>›</i>
+                </div>
+              </div>
+
+              <p class="checkout-payment-google-modal__label">{% if current_language == 'es' %}Metodo de pago{% else %}Payment method{% endif %}</p>
+
+              <div class="checkout-payment-google-modal__payment-row">
+                <div class="checkout-payment-google-modal__payment-left">
+                  <div class="checkout-payment-google-modal__mc">
+                    <div class="checkout-payment-google-modal__mc-red"></div>
+                    <div class="checkout-payment-google-modal__mc-overlap"></div>
+                    <div class="checkout-payment-google-modal__mc-orange"></div>
+                  </div>
+                  <span>{% if current_language == 'es' %}Tarjeta guardada ···· 8951{% else %}Saved card ···· 8951{% endif %}</span>
+                </div>
+                <i>›</i>
+              </div>
+
+              <div class="checkout-payment-google-modal__check-row">
+                <input type="checkbox" id="google-pay-offers" />
+                <label for="google-pay-offers">{% if current_language == 'es' %}Quiero recibir novedades y avisos relacionados con Google Pay{% else %}I want to receive updates related to Google Pay{% endif %}</label>
+                <span>i</span>
+              </div>
+
+              <div class="checkout-payment-google-modal__pay-row">
+                <strong>{{ site_settings.site_name|default:"Wynwood House" }}</strong>
+                <span>USD ${{ booking_summary.total|floatformat:2 }}</span>
+              </div>
+
+              <button type="button" class="checkout-payment-google-modal__continue" data-google-modal-continue>{% if current_language == 'es' %}Continuar{% else %}Continue{% endif %}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="checkout-payment-right">
+        <a href="mailto:{{ site_settings.contact_cta_email|default:site_settings.contact_email }}" class="checkout-payment-help">{{ ui.checkout_help }}</a>
+
+        <div class="checkout-payment-summary">
+          <div class="checkout-payment-summary__property">
+            <div class="checkout-payment-summary__image">{% if checkout_image %}<img src="{{ checkout_image }}" alt="{{ property.display_title }}" />{% endif %}</div>
+            <div>
+              <p class="checkout-payment-summary__title">{{ property.display_title }}</p>
+              <p class="checkout-payment-summary__location">{{ property.display_neighborhood }}, {{ property.city.display_name }}, {{ property.city.display_country }}</p>
+            </div>
+          </div>
+
+          <div class="checkout-payment-summary__divider"></div>
+
+          <div class="checkout-payment-summary__row"><span>{{ ui.checkout_dates }}</span><strong>{{ booking_summary.check_in|date:"d M" }} - {{ booking_summary.check_out|date:"d M" }}</strong></div>
+          <div class="checkout-payment-summary__row"><span>{{ ui.property_guests }}</span><strong>{{ booking_summary.guests }} {% if current_language == 'es' %}personas{% else %}guests{% endif %}</strong></div>
+
+          <div class="checkout-payment-summary__divider"></div>
+
+          <div class="checkout-payment-price-row"><span>US$ {{ property.nightly_price|floatformat:2 }} x {{ booking_summary.nights }}</span><strong>US$ {{ booking_summary.nightly_subtotal|floatformat:2 }}</strong></div>
+          <div class="checkout-payment-price-row"><span>{{ ui.checkout_cleaning_fee }}</span><strong>US$ {{ property.cleaning_fee|floatformat:2 }}</strong></div>
+          {% for service in booking_summary.selected_services %}
+            <div class="checkout-payment-price-row"><span>{{ service.title }}</span><strong>US$ {{ service.price|floatformat:2 }}</strong></div>
+          {% endfor %}
+
+          <div class="checkout-payment-price-row checkout-payment-price-row--label"><span>{{ ui.checkout_tax_label }}</span></div>
+          <div class="checkout-payment-price-row"><span>{{ ui.checkout_vat }} ({{ booking_summary.vat_rate|floatformat:2 }}%)</span><strong>US$ {{ booking_summary.vat|floatformat:2 }}</strong></div>
+          <div class="checkout-payment-price-row"><span>{{ ui.checkout_city_tax }} ({{ booking_summary.city_tax_rate|floatformat:2 }}%)</span><strong>US$ {{ booking_summary.city_tax|floatformat:2 }}</strong></div>
+
+          <div class="checkout-payment-summary__divider"></div>
+
+          <div class="checkout-payment-price-row checkout-payment-price-row--discount"><span>{{ ui.checkout_discount }}</span><strong>US$ -{{ booking_summary.discount|floatformat:2 }}</strong></div>
+
+          <div class="checkout-payment-summary__divider"></div>
+
+          <div class="checkout-payment-price-row checkout-payment-price-row--total"><span>{{ ui.checkout_total }}</span><strong>US$ {{ booking_summary.total|floatformat:2 }}</strong></div>
+
+          <div class="checkout-payment-points">
+            <p>{{ ui.checkout_points_copy }}</p>
+            <span>{{ checkout_points }} Wynwood Points</span>
+            <a href="#">{{ ui.checkout_points_link }}</a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+{% endblock %}
