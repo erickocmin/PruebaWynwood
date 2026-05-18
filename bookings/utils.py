@@ -5,7 +5,7 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.urls import reverse
 
-from .models import FooterSection, NavigationItem, SiteConfiguration
+from .models import Country, FooterSection, NavigationItem, SiteConfiguration
 
 
 def get_current_language(request):
@@ -20,6 +20,11 @@ def localize_city(city, language):
     city.display_name = city.name_es if language == "es" else city.name_en
     city.display_country = city.country_es if language == "es" else city.country_en
     return city
+
+
+def localize_country(country, language):
+    country.display_name = country.name_es if language == "es" else country.name_en
+    return country
 
 
 def localize_property(property_obj, language):

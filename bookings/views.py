@@ -17,7 +17,7 @@ from django.db.models import Q
 from django.contrib.auth.password_validation import get_default_password_validators
 
 from .forms import BookingForm, CheckoutForm, CheckoutProfileForm, LoginForm, RegisterForm, SearchForm
-from .models import AdditionalService, Booking, City, Property
+from .models import AdditionalService, Booking, City, Country, Property
 from .utils import (
     build_confirmation_url,
     build_ui,
@@ -27,6 +27,7 @@ from .utils import (
     localize_additional_service,
     localize_amenity,
     localize_city,
+    localize_country,
     localize_footer_section,
     localize_navigation_item,
     localize_property,
@@ -162,7 +163,15 @@ class LanguageContextMixin:
 
 
 class HomeView(LanguageContextMixin, TemplateView):
-    template_name = "bookings/home.html"
+    template_name = "bookings/index.html"
+    destination_image_map = {
+        "CO": "/media/properties/colombia.jpg",
+        "MX": "/media/properties/mexico.jpg",
+        "PE": "/media/properties/peru.jpg",
+        "PA": "/media/properties/panama.jpg",
+        "ES": "/media/properties/spain.jpg",
+        "US": "/media/properties/usa.png",
+    }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -170,6 +179,10 @@ class HomeView(LanguageContextMixin, TemplateView):
         for property_obj in featured_properties:
             localize_property(property_obj, self.language)
         featured_cities = list(City.objects.filter(is_featured=True))
+        available_cities = list(
+            City.objects.filter(properties__is_active=True).distinct().order_by("sort_order", "name_en")
+        )
+        featured_countries = list(Country.objects.filter(is_active=True).order_by("sort_order", "name_en")[:6])
         hero_property = featured_properties[0] if featured_properties else None
         for city in featured_cities:
             localize_city(city, self.language)
@@ -177,6 +190,13 @@ class HomeView(LanguageContextMixin, TemplateView):
             city.cover_property = city.properties.filter(is_active=True).prefetch_related("images").first()
             if city.cover_property:
                 localize_property(city.cover_property, self.language)
+        city_groups = defaultdict(list)
+        for city in available_cities:
+            localize_city(city, self.language)
+            city_groups[city.display_country].append(city)
+        for country in featured_countries:
+            localize_country(country, self.language)
+            country.image_url = self.destination_image_map.get(country.iso_code, "/media/properties/spain.jpg")
         city_neighborhoods = defaultdict(list)
         active_properties = Property.objects.filter(is_active=True).select_related("city")
         for property_obj in active_properties:
@@ -187,6 +207,8 @@ class HomeView(LanguageContextMixin, TemplateView):
             city_neighborhoods[city_id] = sorted(city_neighborhoods[city_id])
         context["featured_properties"] = featured_properties
         context["featured_cities"] = featured_cities
+        context["featured_countries"] = featured_countries
+        context["city_groups"] = dict(city_groups)
         context["search_form"] = SearchForm(self.request.GET or None)
         context["hero_property"] = hero_property
         context["city_neighborhoods"] = dict(city_neighborhoods)

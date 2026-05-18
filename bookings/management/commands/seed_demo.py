@@ -1,12 +1,9 @@
 from decimal import Decimal
-from io import BytesIO
 from pathlib import Path
 
 from django.contrib.auth import get_user_model
 from django.core.files import File
-from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
-from PIL import Image, ImageDraw
 
 from bookings.models import (
     AdditionalService,
@@ -26,6 +23,20 @@ User = get_user_model()
 
 class Command(BaseCommand):
     help = "Insert demo data for the booking flow."
+    property_image_map = {
+        "madrid-gran-via-residence": [
+            "hero.jpg",
+            "natural1brwithprivateterrace2.png",
+        ],
+        "barcelona-gothic-loft": [
+            "the-colletion.webp",
+            "casa-wh.webp",
+        ],
+        "malaga-marina-escape": [
+            "natural1brwithprivateterrace.png",
+            "real-estate-owner.webp",
+        ],
+    }
 
     def handle(self, *args, **options):
         self.create_admin()
@@ -42,8 +53,7 @@ class Command(BaseCommand):
         ]
         for property_obj in properties:
             property_obj.amenities.set(amenities)
-            if not property_obj.images.exists():
-                self.attach_image(property_obj, property_obj.title_en)
+            self.sync_property_images(property_obj)
         self.create_additional_services()
         self.stdout.write(self.style.SUCCESS("Demo data inserted successfully."))
 
@@ -340,16 +350,61 @@ class Command(BaseCommand):
         )
         return property_obj
 
-    def attach_image(self, property_obj, label):
-        image = Image.new("RGB", (1600, 1000), color=(238, 224, 204))
-        draw = ImageDraw.Draw(image)
-        draw.rectangle((80, 80, 1520, 920), outline=(35, 32, 28), width=6)
-        draw.text((140, 140), label, fill=(35, 32, 28))
-        buffer = BytesIO()
-        image.save(buffer, format="PNG")
-        buffer.seek(0)
-        property_image = PropertyImage(property=property_obj, is_primary=True, sort_order=0)
-        property_image.image.save(f"{property_obj.slug}.png", ContentFile(buffer.read()), save=True)
+    def sync_property_images(self, property_obj):
+        image_names = self.property_image_map.get(property_obj.slug, [])
+        if not image_names:
+            return
+
+        existing_images = list(property_obj.images.all())
+        expected_names = set(image_names)
+        has_seeded_real_images = any(Path(image.image.name).name in expected_names for image in existing_images)
+        if has_seeded_real_images:
+            self.ensure_primary_image(property_obj, image_names[0])
+            return
+
+        placeholder_images = [image for image in existing_images if self.is_generated_placeholder(image, property_obj.slug)]
+        if existing_images and len(placeholder_images) != len(existing_images):
+            return
+
+        for image in placeholder_images:
+            image.delete()
+
+        for sort_order, image_name in enumerate(image_names):
+            self.attach_property_image_from_file(
+                property_obj=property_obj,
+                image_name=image_name,
+                is_primary=sort_order == 0,
+                sort_order=sort_order,
+            )
+
+    def ensure_primary_image(self, property_obj, primary_name):
+        images = list(property_obj.images.all())
+        for image in images:
+            should_be_primary = Path(image.image.name).name == primary_name
+            desired_order = 0 if should_be_primary else image.sort_order
+            if image.is_primary != should_be_primary or image.sort_order != desired_order:
+                image.is_primary = should_be_primary
+                image.sort_order = desired_order
+                image.save(update_fields=["is_primary", "sort_order"])
+
+    def is_generated_placeholder(self, property_image, slug):
+        image_name = Path(property_image.image.name).name
+        expected_names = {f"{slug}.png", f"{slug}.webp"}
+        return image_name in expected_names and f"properties/{slug}/" in property_image.image.name.replace("\\", "/")
+
+    def attach_property_image_from_file(self, property_obj, image_name, is_primary, sort_order):
+        source_path = self.media_source_dir / image_name
+        if not source_path.exists():
+            return
+        property_image = PropertyImage(
+            property=property_obj,
+            is_primary=is_primary,
+            sort_order=sort_order,
+            alt_text_es=property_obj.title_es,
+            alt_text_en=property_obj.title_en,
+        )
+        with source_path.open("rb") as image_file:
+            property_image.image.save(image_name, File(image_file), save=True)
 
     def create_additional_services(self):
         services = [
