@@ -89,6 +89,55 @@ def build_selected_services(pending, language):
     return services
 
 
+def build_checkout_summary(pending, property_obj, language):
+    check_in = date.fromisoformat(pending["check_in"])
+    check_out = date.fromisoformat(pending["check_out"])
+    selected_services = build_selected_services(pending, language)
+    service_total = sum((service["price"] for service in selected_services), Decimal("0"))
+    nights = (check_out - check_in).days
+    return {
+        "check_in": check_in,
+        "check_out": check_out,
+        "guests": pending["guests"],
+        "nights": nights,
+        "nightly_subtotal": Decimal(nights) * property_obj.nightly_price,
+        "selected_services": selected_services,
+        "service_total": service_total,
+        "subtotal": calculate_booking_total(property_obj, check_in, check_out),
+        "total": calculate_booking_total(property_obj, check_in, check_out) + service_total,
+    }
+
+
+def build_payment_summary(pending, property_obj, language):
+    check_in = date.fromisoformat(pending["check_in"])
+    check_out = date.fromisoformat(pending["check_out"])
+    selected_services = build_selected_services(pending, language)
+    nightly_subtotal = Decimal((check_out - check_in).days) * property_obj.nightly_price
+    service_total = sum((service["price"] for service in selected_services), Decimal("0"))
+    subtotal = calculate_booking_total(property_obj, check_in, check_out)
+    _, vat_rate, city_tax_rate, loyalty_discount, _ = get_site_rates()
+    vat = (nightly_subtotal * vat_rate).quantize(Decimal("0.01"))
+    city_tax = (nightly_subtotal * city_tax_rate).quantize(Decimal("0.01"))
+    discount = loyalty_discount
+    total = subtotal + service_total + vat + city_tax - discount
+    return {
+        "check_in": check_in,
+        "check_out": check_out,
+        "guests": pending["guests"],
+        "nights": (check_out - check_in).days,
+        "nightly_subtotal": nightly_subtotal,
+        "selected_services": selected_services,
+        "service_total": service_total,
+        "subtotal": subtotal,
+        "vat": vat,
+        "city_tax": city_tax,
+        "vat_rate": vat_rate,
+        "city_tax_rate": city_tax_rate,
+        "discount": discount,
+        "total": total,
+    }
+
+
 def build_property_gallery(property_obj, minimum=3):
     gallery = []
     slug_media_prefix = f"/media/properties/{property_obj.slug}/"
@@ -333,6 +382,45 @@ class PropertyDetailView(LanguageContextMixin, DetailView):
 class BeginCheckoutView(LanguageContextMixin, FormView):
     form_class = BookingForm
 
+    def get(self, request, *args, **kwargs):
+        property_obj = get_object_or_404(Property, slug=kwargs["slug"], is_active=True)
+        pending = self.build_pending_from_request(request, property_obj)
+        if pending:
+            request.session["pending_booking"] = pending
+            return redirect("checkout")
+        return redirect("property-detail", slug=property_obj.slug)
+
+    def build_pending_from_request(self, request, property_obj):
+        raw_check_in = request.GET.get("check_in") or request.POST.get("check_in")
+        raw_check_out = request.GET.get("check_out") or request.POST.get("check_out")
+        raw_guests = request.GET.get("guests") or request.POST.get("guests")
+        special_request = request.GET.get("special_request") or request.POST.get("special_request", "")
+
+        if not raw_check_in or not raw_check_out:
+            return None
+
+        try:
+            check_in = date.fromisoformat(raw_check_in)
+            check_out = date.fromisoformat(raw_check_out)
+        except (TypeError, ValueError):
+            return None
+
+        if check_out <= check_in:
+            return None
+
+        try:
+            guests = max(1, int(raw_guests or 1))
+        except (TypeError, ValueError):
+            guests = 1
+
+        return {
+            "property_id": property_obj.pk,
+            "check_in": check_in.isoformat(),
+            "check_out": check_out.isoformat(),
+            "guests": guests,
+            "special_request": special_request,
+        }
+
     def post(self, request, *args, **kwargs):
         property_obj = get_object_or_404(Property, slug=kwargs["slug"], is_active=True)
         form = BookingForm(request.POST, property_obj=property_obj)
@@ -347,8 +435,13 @@ class BeginCheckoutView(LanguageContextMixin, FormView):
             }
             return redirect("checkout")
         messages.error(request, "Please fix the reservation details." if self.language == "en" else "Corrige los datos de la reserva.")
-        detail_view = PropertyDetailView.as_view()
-        return detail_view(request, slug=property_obj.slug, booking_form=form)
+        detail_view = PropertyDetailView()
+        detail_view.setup(request, slug=property_obj.slug)
+        detail_view.language = self.language
+        detail_view.ui = self.ui
+        detail_view.object = property_obj
+        context = detail_view.get_context_data(object=property_obj, booking_form=form)
+        return detail_view.render_to_response(context)
 
 
 class LoginView(LanguageContextMixin, FormView):
@@ -483,21 +576,7 @@ class CheckoutView(LanguageContextMixin, TemplateView):
         )
 
     def build_booking_summary(self, pending, property_obj):
-        check_in = date.fromisoformat(pending["check_in"])
-        check_out = date.fromisoformat(pending["check_out"])
-        selected_services = build_selected_services(pending, self.language)
-        service_total = sum((service["price"] for service in selected_services), Decimal("0"))
-        return {
-            "check_in": check_in,
-            "check_out": check_out,
-            "guests": pending["guests"],
-            "nights": (check_out - check_in).days,
-            "nightly_subtotal": Decimal((check_out - check_in).days) * property_obj.nightly_price,
-            "selected_services": selected_services,
-            "service_total": service_total,
-            "subtotal": calculate_booking_total(property_obj, check_in, check_out),
-            "total": calculate_booking_total(property_obj, check_in, check_out) + service_total,
-        }
+        return build_checkout_summary(pending, property_obj, self.language)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -568,13 +647,14 @@ class CheckoutServicesView(LanguageContextMixin, TemplateView):
         pending = self.request.session.get("pending_booking")
         property_obj = get_object_or_404(Property, pk=pending["property_id"], is_active=True)
         localize_property(property_obj, self.language)
-        booking_summary = CheckoutView().build_booking_summary(pending, property_obj)
+        booking_summary = build_checkout_summary(pending, property_obj, self.language)
         gallery = build_property_gallery(property_obj, minimum=1)
         checkout_details = self.request.session.get("checkout_details", {})
         context["property"] = property_obj
         context["booking_summary"] = booking_summary
         context["checkout_image"] = gallery[0]["url"] if gallery else ""
-        context["checkout_points"] = int((booking_summary["total"] or 0) // 2)
+        _, _, _, _, points_divisor = get_site_rates()
+        context["checkout_points"] = int((booking_summary["total"] or 0) // points_divisor)
         context["additional_services"] = [
             {
                 "id": service.code,
@@ -693,33 +773,7 @@ class CheckoutPaymentView(LanguageContextMixin, TemplateView):
         )
 
     def build_booking_summary(self, pending, property_obj):
-        check_in = date.fromisoformat(pending["check_in"])
-        check_out = date.fromisoformat(pending["check_out"])
-        selected_services = build_selected_services(pending, self.language)
-        nightly_subtotal = Decimal((check_out - check_in).days) * property_obj.nightly_price
-        service_total = sum((service["price"] for service in selected_services), Decimal("0"))
-        subtotal = calculate_booking_total(property_obj, check_in, check_out)
-        _, vat_rate, city_tax_rate, loyalty_discount, _ = get_site_rates()
-        vat = (nightly_subtotal * vat_rate).quantize(Decimal("0.01"))
-        city_tax = (nightly_subtotal * city_tax_rate).quantize(Decimal("0.01"))
-        discount = loyalty_discount
-        total = subtotal + service_total + vat + city_tax - discount
-        return {
-            "check_in": check_in,
-            "check_out": check_out,
-            "guests": pending["guests"],
-            "nights": (check_out - check_in).days,
-            "nightly_subtotal": nightly_subtotal,
-            "selected_services": selected_services,
-            "service_total": service_total,
-            "subtotal": subtotal,
-            "vat": vat,
-            "city_tax": city_tax,
-            "vat_rate": vat_rate,
-            "city_tax_rate": city_tax_rate,
-            "discount": discount,
-            "total": total,
-        }
+        return build_payment_summary(pending, property_obj, self.language)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -786,7 +840,7 @@ class CheckoutFlexServiceView(LanguageContextMixin, TemplateView):
         pending = self.request.session.get("pending_booking")
         property_obj = get_object_or_404(Property, pk=pending["property_id"], is_active=True)
         localize_property(property_obj, self.language)
-        booking_summary = CheckoutPaymentView().build_booking_summary(pending, property_obj)
+        booking_summary = build_payment_summary(pending, property_obj, self.language)
         gallery = build_property_gallery(property_obj, minimum=1)
         flex_details = pending.get("flex_details", {})
         context["property"] = property_obj
@@ -846,7 +900,7 @@ class CheckoutTransportServiceView(LanguageContextMixin, TemplateView):
         pending = self.request.session.get("pending_booking")
         property_obj = get_object_or_404(Property, pk=pending["property_id"], is_active=True)
         localize_property(property_obj, self.language)
-        booking_summary = CheckoutPaymentView().build_booking_summary(pending, property_obj)
+        booking_summary = build_payment_summary(pending, property_obj, self.language)
         gallery = build_property_gallery(property_obj, minimum=1)
         transport_details = pending.get("transport_details", {})
         context["property"] = property_obj

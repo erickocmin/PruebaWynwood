@@ -116,6 +116,16 @@ class CheckoutFlowTests(TestCase):
         )
         self.property.amenities.add(self.amenity)
         AdditionalService.objects.create(
+            code="flex",
+            title_es="Check-in flexible",
+            title_en="Flexible check-in",
+            description_es="Horarios flexibles.",
+            description_en="Flexible times.",
+            price="48.00",
+            is_active=True,
+            sort_order=0,
+        )
+        AdditionalService.objects.create(
             code="transport",
             title_es="Servicio de transporte",
             title_en="Transport service",
@@ -127,30 +137,36 @@ class CheckoutFlowTests(TestCase):
             sort_order=1,
         )
 
-    def test_checkout_payment_creates_booking_user_and_confirmation_email(self):
-        session = self.client.session
+    def seed_pending_checkout(self, *, selected_services=None, register=None, user=None):
         check_in = timezone.localdate() + timedelta(days=10)
         check_out = check_in + timedelta(days=3)
+        session = self.client.session
         session["pending_booking"] = {
             "property_id": self.property.pk,
             "check_in": check_in.isoformat(),
             "check_out": check_out.isoformat(),
             "guests": 2,
             "special_request": "Late arrival",
-            "selected_services": [],
+            "selected_services": selected_services or [],
         }
         session["checkout_details"] = {
             "nationality": self.country.pk,
             "birth_date": "1995-04-20",
             "guest_phone": "+51999999999",
             "newsletter_opt_out": True,
-            "register": {
+            "register": register or {
                 "first_name": "Jimmy",
                 "email": "jimmy@example.com",
                 "password1": "SecurePass123!",
             },
         }
         session.save()
+        if user is not None:
+            self.client.force_login(user)
+        return check_in, check_out
+
+    def test_checkout_payment_creates_booking_user_and_confirmation_email(self):
+        self.seed_pending_checkout()
 
         response = self.client.post(
             reverse("checkout-payment"),
@@ -195,27 +211,7 @@ class CheckoutFlowTests(TestCase):
             payment_reference="WH-GOOGLE-1-1",
         )
 
-        session = self.client.session
-        session["pending_booking"] = {
-            "property_id": self.property.pk,
-            "check_in": check_in.isoformat(),
-            "check_out": check_out.isoformat(),
-            "guests": 2,
-            "special_request": "",
-            "selected_services": [],
-        }
-        session["checkout_details"] = {
-            "nationality": self.country.pk,
-            "birth_date": "1995-04-20",
-            "guest_phone": "+51999999999",
-            "newsletter_opt_out": True,
-            "register": {
-                "first_name": "Jimmy",
-                "email": "jimmy@example.com",
-                "password1": "SecurePass123!",
-            },
-        }
-        session.save()
+        self.seed_pending_checkout()
 
         response = self.client.post(
             reverse("checkout-payment"),
@@ -234,3 +230,231 @@ class CheckoutFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "TV")
+
+    def test_begin_checkout_invalid_dates_rerenders_property_without_405(self):
+        response = self.client.post(
+            reverse("begin-checkout", kwargs={"slug": self.property.slug}),
+            data={
+                "check_in": (timezone.localdate() - timedelta(days=2)).isoformat(),
+                "check_out": (timezone.localdate() + timedelta(days=2)).isoformat(),
+                "guests": 2,
+                "special_request": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "checkout-error")
+
+    def test_checkout_services_page_renders_with_pending_booking(self):
+        self.seed_pending_checkout(selected_services=["flex"])
+
+        response = self.client.get(reverse("checkout-services"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.property.title_en)
+
+    def test_checkout_service_detail_pages_render_without_manual_view_context_errors(self):
+        session = self.client.session
+        self.seed_pending_checkout(selected_services=["flex", "transport"])
+        session = self.client.session
+        session["pending_booking"]["flex_details"] = {
+            "request_type": "both",
+            "check_in_slot": "11:00AM - 1:00PM",
+            "check_out_slot": "1:00PM - 3:00PM",
+        }
+        session["pending_booking"]["transport_details"] = {
+            "trip_type": "idavuelta",
+            "vehicle_type": "suv",
+            "quantity": 2,
+        }
+        session.save()
+
+        flex_response = self.client.get(reverse("checkout-flex"))
+        transport_response = self.client.get(reverse("checkout-transport"))
+
+        self.assertEqual(flex_response.status_code, 200)
+        self.assertEqual(transport_response.status_code, 200)
+        self.assertContains(flex_response, "Flexible check-in")
+        self.assertContains(transport_response, "Transport service")
+
+    def test_frontend_checkout_post_persists_selected_services_and_redirects(self):
+        check_in = timezone.localdate() + timedelta(days=20)
+        check_out = check_in + timedelta(days=4)
+
+        reserve_response = self.client.post(
+            reverse("begin-checkout", kwargs={"slug": self.property.slug}),
+            data={
+                "check_in": check_in.isoformat(),
+                "check_out": check_out.isoformat(),
+                "guests": 2,
+                "special_request": "Late arrival",
+            },
+        )
+        self.assertEqual(reserve_response.status_code, 302)
+        self.assertEqual(reserve_response.url, reverse("checkout"))
+
+        response = self.client.post(
+            reverse("checkout"),
+            data={
+                "register-first_name": "Jimmy",
+                "register-email": "frontend@example.com",
+                "register-password1": "SecurePass123!",
+                "nationality": self.country.pk,
+                "birth_date": "1995-04-20",
+                "guest_phone": "+51999999999",
+                "selected_services": ["flex", "crib"],
+                "newsletter_opt_out": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("checkout-services"))
+        self.assertEqual(set(self.client.session["pending_booking"]["selected_services"]), {"flex", "crib"})
+
+    def test_checkout_services_post_matches_frontend_hidden_inputs(self):
+        self.seed_pending_checkout(selected_services=["flex"])
+
+        response = self.client.post(
+            reverse("checkout-services"),
+            data={"selected_services": ["flex", "fridge"]},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("checkout-payment"))
+        self.assertEqual(set(self.client.session["pending_booking"]["selected_services"]), {"flex", "fridge"})
+
+    def test_checkout_flex_add_and_back_update_session(self):
+        self.seed_pending_checkout(selected_services=[])
+
+        add_response = self.client.post(
+            reverse("checkout-flex"),
+            data={
+                "action": "add",
+                "request_type": "late",
+                "check_in_slot": "1:00PM - 3:00PM",
+                "check_out_slot": "3:00PM - 5:00PM",
+            },
+        )
+
+        self.assertEqual(add_response.status_code, 302)
+        self.assertEqual(add_response.url, reverse("checkout-services"))
+        pending = self.client.session["pending_booking"]
+        self.assertIn("flex", pending["selected_services"])
+        self.assertEqual(pending["flex_details"]["request_type"], "late")
+
+        back_response = self.client.post(reverse("checkout-flex"), data={"action": "back"})
+        self.assertEqual(back_response.status_code, 302)
+        self.assertEqual(back_response.url, reverse("checkout-services"))
+        pending = self.client.session["pending_booking"]
+        self.assertNotIn("flex", pending["selected_services"])
+        self.assertNotIn("flex_details", pending)
+
+    def test_checkout_transport_add_and_back_update_session(self):
+        self.seed_pending_checkout(selected_services=[])
+
+        add_response = self.client.post(
+            reverse("checkout-transport"),
+            data={
+                "action": "add",
+                "trip_type": "ida",
+                "vehicle_type": "van",
+                "quantity": 3,
+            },
+        )
+
+        self.assertEqual(add_response.status_code, 302)
+        self.assertEqual(add_response.url, reverse("checkout-services"))
+        pending = self.client.session["pending_booking"]
+        self.assertIn("transport", pending["selected_services"])
+        self.assertEqual(pending["transport_details"]["vehicle_type"], "van")
+        self.assertEqual(pending["transport_details"]["quantity"], 3)
+
+        back_response = self.client.post(reverse("checkout-transport"), data={"action": "back"})
+        self.assertEqual(back_response.status_code, 302)
+        self.assertEqual(back_response.url, reverse("checkout-services"))
+        pending = self.client.session["pending_booking"]
+        self.assertNotIn("transport", pending["selected_services"])
+        self.assertNotIn("transport_details", pending)
+
+    def test_checkout_payment_apple_flow_creates_booking(self):
+        self.seed_pending_checkout(selected_services=["flex"])
+
+        response = self.client.post(
+            reverse("checkout-payment"),
+            data={
+                "payment_method": "apple",
+                "accept_terms_apple": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Booking.objects.count(), 1)
+
+    def test_checkout_payment_requires_cardholder_confirmation_for_card(self):
+        self.seed_pending_checkout()
+
+        response = self.client.post(
+            reverse("checkout-payment"),
+            data={
+                "payment-payment_method": "card",
+                "payment-cardholder_name": "Jimmy",
+                "payment-card_number": "4242 4242 4242 4242",
+                "payment-expiry_month": 12,
+                "payment-expiry_year": timezone.localdate().year + 1,
+                "payment-cvv": "123",
+                "payment-billing_address": "Street 123",
+                "payment-billing_country": self.country.pk,
+                "payment-billing_region": "Lima",
+                "payment-billing_city": "Lima",
+                "payment-billing_postal_code": "15001",
+                "payment-accept_terms": "on",
+                "payment_method": "card",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "cardholder")
+        self.assertEqual(Booking.objects.count(), 0)
+
+    def test_checkout_routes_redirect_when_session_state_is_missing(self):
+        services_response = self.client.get(reverse("checkout-services"))
+        payment_response = self.client.get(reverse("checkout-payment"))
+        flex_response = self.client.get(reverse("checkout-flex"))
+        transport_response = self.client.get(reverse("checkout-transport"))
+
+        self.assertEqual(services_response.status_code, 302)
+        self.assertEqual(services_response.url, reverse("home"))
+        self.assertEqual(payment_response.status_code, 302)
+        self.assertEqual(payment_response.url, reverse("home"))
+        self.assertEqual(flex_response.status_code, 302)
+        self.assertEqual(flex_response.url, reverse("home"))
+        self.assertEqual(transport_response.status_code, 302)
+        self.assertEqual(transport_response.url, reverse("home"))
+
+    def test_authenticated_user_can_complete_checkout_without_register_form(self):
+        user = User.objects.create_user(username="auth@example.com", email="auth@example.com", password="SecurePass123!", first_name="Auth")
+        check_in, check_out = self.seed_pending_checkout(
+            selected_services=["transport"],
+            register={},
+            user=user,
+        )
+
+        session = self.client.session
+        session["pending_booking"]["transport_details"] = {
+            "trip_type": "idavuelta",
+            "vehicle_type": "suv",
+            "quantity": 1,
+        }
+        session.save()
+
+        response = self.client.post(
+            reverse("checkout-payment"),
+            data={
+                "payment_method": "google",
+                "accept_terms_google": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        booking = Booking.objects.get(guest=user, check_in=check_in, check_out=check_out)
+        self.assertEqual(booking.status, Booking.Status.CONFIRMED)
